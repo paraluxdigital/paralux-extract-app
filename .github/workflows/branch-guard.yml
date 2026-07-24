@@ -1,0 +1,22 @@
+name: Branch Guard
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  guard:
+    name: Only staging or hotfix/* may target main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source branch
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          echo "PR source branch: $HEAD_REF"
+          if [[ "$HEAD_REF" == "staging" || "$HEAD_REF" == hotfix/* ]]; then
+            echo "OK: '$HEAD_REF' is allowed to merge into main."
+          else
+            echo "::error::Only 'staging' or 'hotfix/*' branches may be merged into main. '$HEAD_REF' is not allowed."
+            exit 1
+          fi
