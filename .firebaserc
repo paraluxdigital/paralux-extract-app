@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "paralux-digital"
+  },
+  "targets": {
+    "paralux-digital": {
+      "hosting": {
+        "prod": [
+          "paralux-extract-app"
+        ],
+        "staging": [
+          "paralux-extract-app-staging"
+        ]
+      }
+    }
+  }
+}
