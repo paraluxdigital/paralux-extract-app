@@ -6,7 +6,7 @@ export const CodeExporter: React.FC = () => {
   const snippets = {
     curl: `curl -X POST "https://extract.paralux.digital/api/extract" \\
   -H "Content-Type: application/json" \\
-  -H "x-api-key: px_live_99812471829471" \\
+  -H "x-api-key: px_live_your_api_key_here" \\
   -d '{
     "model": "gemini-3.1-flash-lite",
     "documentType": "invoice",
@@ -33,7 +33,7 @@ async function extractInvoice() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': 'px_live_99812471829471',
+      'x-api-key': 'px_live_your_api_key_here',
     },
     body: JSON.stringify({
       model: 'gemini-3.1-flash-lite',
@@ -59,7 +59,7 @@ extractInvoice();`,
 url = "https://extract.paralux.digital/api/extract"
 headers = {
     "Content-Type": "application/json",
-    "x-api-key": "px_live_99812471829471"
+    "x-api-key": "px_live_your_api_key_here"
 }
 
 payload = {
