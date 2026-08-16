@@ -1,8 +1,8 @@
-import type { ExtractionApiResponse } from '../types/extraction';
+import type { ExtractionApiResponse, ExtractionModeType } from '../types/extraction';
 
 const PRIMARY_API_URL = '/api/extract';
-const DEV_FALLBACK_API_URL = 'http://127.0.0.1:5001/paralux-digital/us-central1/extractionApi/extract';
-const PROD_FALLBACK_API_URL = 'https://us-central1-paralux-digital.cloudfunctions.net/extractionApi/extract';
+const DEV_FALLBACK_API_URL = 'http://127.0.0.1:5001/paralux-extract/us-central1/extractionApi/extract';
+const PROD_FALLBACK_API_URL = 'https://us-central1-paralux-extract.cloudfunctions.net/extractionApi/extract';
 
 export async function extractDocument(payload: {
   schema: Record<string, any>;
@@ -10,14 +10,23 @@ export async function extractDocument(payload: {
   documentType?: string;
   userId?: string;
   apiKey?: string;
-  model?: string;
-  markupMultiplier?: number;
+  extractionMode?: ExtractionModeType;
 }): Promise<ExtractionApiResponse> {
-  const body = JSON.stringify(payload);
-  const headers = {
+  const body = JSON.stringify({
+    schema: payload.schema,
+    document: payload.document,
+    documentType: payload.documentType,
+    extractionMode: payload.extractionMode || 1,
+  });
+
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-user-id': payload.userId || 'web_sandbox_user',
   };
+
+  if (payload.apiKey) {
+    headers['x-api-key'] = payload.apiKey;
+  }
 
   try {
     const response = await fetch(PRIMARY_API_URL, {

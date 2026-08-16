@@ -13,36 +13,45 @@ export interface SchemaField {
   required: boolean;
 }
 
-export interface ExtractionUsageMetrics {
-  promptTokens: number;
-  candidatesTokens: number;
-  thoughtsTokens: number;
-  totalTokens: number;
-  executionTimeMs: number;
-  model: string;
-  providerCostUsd: number;
-  clientPriceUsd: number;
-  timestamp: number;
+export type ExtractionModeType = 1 | 2;
+
+export interface ExtractionModeConfig {
+  mode: ExtractionModeType;
+  name: string;
+  badge: string;
+  creditsCost: number;
+  description: string;
+  recommendedFor: string[];
 }
+
+export const EXTRACTION_MODES: ExtractionModeConfig[] = [
+  {
+    mode: 1,
+    name: 'Standard Extraction',
+    badge: '1 CREDIT / DOC',
+    creditsCost: 1,
+    description: 'High-speed, low-latency extraction for standard documents, receipts, and invoices.',
+    recommendedFor: ['Invoices & Billing Statements', 'Retail & POS Receipts', 'Simple Application Forms', 'Standard Text Documents'],
+  },
+  {
+    mode: 2,
+    name: 'Advanced Multimodal',
+    badge: '2 CREDITS / DOC',
+    creditsCost: 2,
+    description: 'Frontier multimodal engine with deep visual layout parsing for complex or low-quality documents.',
+    recommendedFor: ['Multi-page Complex Contracts', 'Dense Financial Tables & Spreadsheets', 'Scanned / Low-Res / Skewed Documents', 'Resumes & Custom Technical Docs'],
+  },
+];
 
 export interface ExtractionApiResponse {
   status: 'success' | 'error';
   data?: any;
-  usage?: ExtractionUsageMetrics;
   extractionId?: string;
+  creditsUsed?: number;
+  creditsRemaining?: number;
+  executionTimeMs?: number;
+  timestamp?: number;
   error?: string;
-}
-
-export interface ModelOption {
-  id: string;
-  name: string;
-  badge: string;
-  description: string;
-  inputRate: number; // per 1,000,000 tokens
-  outputRate: number; // per 1,000,000 tokens
-  inputRateText: string;
-  outputRateText: string;
-  isDefault?: boolean;
 }
 
 export interface UploadedFile {

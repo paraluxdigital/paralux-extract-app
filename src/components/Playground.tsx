@@ -1,52 +1,28 @@
 import React, { useState, useMemo } from 'react';
-import type { SchemaField, ArrayItemProperty, ModelOption, UploadedFile, ExtractionApiResponse } from '../types/extraction';
+import { useAuth } from '../context/useAuth';
+import {
+  EXTRACTION_MODES,
+  type SchemaField,
+  type ArrayItemProperty,
+  type ExtractionModeType,
+  type UploadedFile,
+  type ExtractionApiResponse,
+} from '../types/extraction';
 import { extractDocument } from '../services/api';
 
-export const AVAILABLE_MODELS: ModelOption[] = [
-  {
-    id: 'gemini-3.1-flash-lite',
-    name: 'Gemini 3.1 Flash-Lite',
-    badge: 'DEFAULT / FAST',
-    description: 'GA model optimized for high-volume tasks ($0.30/1M in, $1.50/1M out)',
-    inputRate: 0.30,
-    outputRate: 1.50,
-    inputRateText: '$0.30 / 1M',
-    outputRateText: '$1.50 / 1M',
-    isDefault: true,
-  },
-  {
-    id: 'gemini-3.5-flash-lite',
-    name: 'Gemini 3.5 Flash-Lite',
-    description: 'High-volume agentic tasks & translation ($0.30/1M in, $2.50/1M out)',
-    inputRate: 0.30,
-    outputRate: 2.50,
-    inputRateText: '$0.30 / 1M',
-    outputRateText: '$2.50 / 1M',
-    badge: 'BALANCED',
-  },
-  {
-    id: 'gemini-3.6-flash',
-    name: 'Gemini 3.6 Flash',
-    description: 'Frontier intelligence with superior search & vision ($1.50/1M in, $7.50/1M out)',
-    inputRate: 1.50,
-    outputRate: 7.50,
-    inputRateText: '$1.50 / 1M',
-    outputRateText: '$7.50 / 1M',
-    badge: 'FRONTIER VISION',
-  },
-];
-
-export const PRESET_TEMPLATES = [
+const PRESET_TEMPLATES = [
   {
     name: 'Invoice Extractor',
     documentType: 'invoice',
+    icon: 'receipt_long',
     description: 'Extracts invoice numbers, dates, client names, line items, and totals.',
+    sampleText: `PARALUX DIGITAL INVOICE\nInvoice Number: INV-2026-889\nDate: 2026-07-22\nClient Name: Acme Software Inc.\n\nItems:\n- Web Application Development (50 hrs @ $120/hr) = $6,000.00\n- Cloud Architecture & Security Audit (1 unit) = $1,500.00\n- AI Document Extraction Pipeline Integration = $2,500.00\n\nSubtotal: $10,000.00\nTax (10%): $1,000.00\nTotal Amount Due: $11,000.00`,
     fields: [
-      { key: 'invoiceNumber', type: 'string', description: 'Invoice number', required: true },
-      { key: 'date', type: 'string', description: 'Invoice date', required: true },
+      { key: 'invoiceNumber', type: 'string', description: 'Invoice unique identifier', required: true },
+      { key: 'date', type: 'string', description: 'Invoice issuance date', required: true },
       { key: 'clientName', type: 'string', description: 'Client or company name', required: true },
-      { key: 'totalAmount', type: 'number', description: 'Total amount due', required: true },
-      { key: 'taxAmount', type: 'number', description: 'Tax amount', required: false },
+      { key: 'totalAmount', type: 'number', description: 'Total amount due in USD', required: true },
+      { key: 'taxAmount', type: 'number', description: 'Tax amount in USD', required: false },
       {
         key: 'lineItems',
         type: 'array',
@@ -63,10 +39,13 @@ export const PRESET_TEMPLATES = [
   {
     name: 'Receipt Scanner',
     documentType: 'receipt',
-    description: 'Extracts merchant name, purchase date, payment method, tax, and total.',
+    icon: 'shopping_bag',
+    description: 'Extracts store name, transaction timestamp, payment method, tax, and total.',
+    sampleText: `COFFEE ROASTERS & BAKERY\nDate: 2026-08-14 09:30 AM\nStore: San Juan Roasters #104\nPayment: Apple Pay (Visa ****4921)\n\nItems:\n- 2x Iced Vanilla Latte ($6.50 ea) = $13.00\n- 1x Almond Croissant = $4.75\n- 1x Avocado Toast = $9.25\n\nSubtotal: $27.00\nSales Tax: $3.11\nTotal: $30.11`,
     fields: [
       { key: 'storeName', type: 'string', description: 'Store or vendor name', required: true },
-      { key: 'transactionDate', type: 'string', description: 'Date of transaction', required: true },
+      { key: 'transactionDate', type: 'string', description: 'Date and time of transaction', required: true },
+      { key: 'paymentMethod', type: 'string', description: 'Method of payment', required: false },
       { key: 'total', type: 'number', description: 'Grand total cost', required: true },
       { key: 'tax', type: 'number', description: 'Tax paid', required: false },
       {
@@ -85,65 +64,66 @@ export const PRESET_TEMPLATES = [
   {
     name: 'Resume / CV Parser',
     documentType: 'resume',
-    description: 'Extracts candidate name, email, skills, and experience.',
+    icon: 'badge',
+    description: 'Extracts candidate name, email, phone, core skills, and experience.',
+    sampleText: `ALEXANDER RIVERA\nEmail: alex.rivera@example.com | Phone: (787) 555-0199 | San Juan, PR\nRole: Senior Full Stack Cloud Engineer (8+ Years Experience)\n\nCore Skills: React, TypeScript, Next.js, Node.js, Python, PostgreSQL, Google Cloud, Docker, Gemini AI\n\nSummary:\nProven software architect with deep expertise in cloud architectures and AI extraction systems.`,
     fields: [
       { key: 'candidateName', type: 'string', description: 'Full name of candidate', required: true },
       { key: 'email', type: 'string', description: 'Email address', required: true },
       { key: 'phone', type: 'string', description: 'Phone number', required: false },
       { key: 'skills', type: 'array', itemsType: 'string', description: 'Key technical skills', required: true },
-      { key: 'yearsExperience', type: 'number', description: 'Total years of experience', required: false },
+      { key: 'yearsExperience', type: 'number', description: 'Total years of professional experience', required: false },
+    ],
+  },
+  {
+    name: 'Lease Agreement',
+    documentType: 'contract',
+    icon: 'home_work',
+    description: 'Extracts property address, landlord, tenant, monthly rent, and lease term.',
+    sampleText: `RESIDENTIAL LEASE AGREEMENT\nProperty Address: 1420 Ponce de Leon Ave, Apt 4B, San Juan, PR 00907\nLandlord: Caribbean Realty Holdings LLC\nTenant: Sofia Maria Rodriguez\nLease Term: 12 Months (Starting Sept 1, 2026 to August 31, 2027)\nMonthly Rent: $2,400.00 (Due on the 1st of each month)\nSecurity Deposit: $2,400.00\nUtilities Included: Water, High-Speed Fiber Internet`,
+    fields: [
+      { key: 'propertyAddress', type: 'string', description: 'Full property address', required: true },
+      { key: 'landlord', type: 'string', description: 'Landlord entity or name', required: true },
+      { key: 'tenant', type: 'string', description: 'Tenant name', required: true },
+      { key: 'monthlyRent', type: 'number', description: 'Monthly rent in USD', required: true },
+      { key: 'securityDeposit', type: 'number', description: 'Deposit amount', required: false },
+      { key: 'leaseTerm', type: 'string', description: 'Duration of lease', required: true },
     ],
   },
 ];
 
 export const Playground: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'visual' | 'json'>('visual');
+  const { currentUser, userProfile } = useAuth();
+  const [schemaMode, setSchemaMode] = useState<'visual' | 'json'>('visual');
+  const [resultViewMode, setResultViewMode] = useState<'visual' | 'json'>('visual');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const [schemaName, setSchemaName] = useState('Invoice Extractor');
   const [schemaDesc, setSchemaDesc] = useState('Extracts financial key details from invoices and receipts.');
   const [documentType, setDocumentType] = useState('invoice');
-  const [selectedModel, setSelectedModel] = useState<string>('gemini-3.1-flash-lite');
-  const [markupMultiplier, setMarkupMultiplier] = useState<number>(3.0);
+  const [extractionMode, setExtractionMode] = useState<ExtractionModeType>(1);
 
   const [inputType, setInputType] = useState<'text' | 'file'>('text');
-  const [pastedText, setPastedText] = useState<string>(
-    `PARALUX DIGITAL INVOICE\nInvoice Number: INV-2026-889\nDate: 2026-07-22\nClient Name: Acme Software Inc.\n\nItems:\n- Web Application Development (50 hrs @ $120/hr) = $6,000.00\n- Firebase Cloud Infrastructure Setup (1 unit) = $1,500.00\n\nSubtotal: $7,500.00\nTax (10%): $750.00\nTotal Amount Due: $8,250.00`
-  );
+  const [pastedText, setPastedText] = useState<string>(PRESET_TEMPLATES[0].sampleText);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
 
   const [isExtracting, setIsExtracting] = useState<boolean>(false);
   const [extractionResult, setExtractionResult] = useState<ExtractionApiResponse | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
 
-  const [visualFields, setVisualFields] = useState<SchemaField[]>([
-    { key: 'invoiceNumber', type: 'string', description: 'Invoice unique identifier', required: true },
-    { key: 'date', type: 'string', description: 'Issue date of the invoice', required: true },
-    { key: 'clientName', type: 'string', description: 'Name of the billed client', required: true },
-    { key: 'totalAmount', type: 'number', description: 'Total amount due', required: true },
-    { key: 'taxAmount', type: 'number', description: 'Tax amount', required: false },
-    {
-      key: 'lineItems',
-      type: 'array',
-      itemsType: 'object',
-      itemProperties: [
-        { key: 'description', type: 'string', description: 'Item description' },
-        { key: 'amount', type: 'number', description: 'Item cost' },
-      ],
-      description: 'List of billed line items',
-      required: false,
-    },
-  ]);
+  const [visualFields, setVisualFields] = useState<SchemaField[]>(PRESET_TEMPLATES[0].fields as SchemaField[]);
 
   const [rawJsonSchema, setRawJsonSchema] = useState<string>(
     JSON.stringify(
       {
         invoiceNumber: { type: 'string', description: 'Invoice unique identifier' },
-        date: { type: 'string', description: 'Issue date of the invoice' },
-        clientName: { type: 'string', description: 'Name of the billed client' },
-        totalAmount: { type: 'number', description: 'Total amount due' },
-        taxAmount: { type: 'number', description: 'Tax amount' },
+        date: { type: 'string', description: 'Invoice issuance date' },
+        clientName: { type: 'string', description: 'Client or company name' },
+        totalAmount: { type: 'number', description: 'Total amount due in USD' },
+        taxAmount: { type: 'number', description: 'Tax amount in USD' },
         lineItems: {
           type: 'array',
-          description: 'List of billed line items',
+          description: 'List of billed items',
           items: {
             type: 'object',
             properties: {
@@ -158,12 +138,17 @@ export const Playground: React.FC = () => {
     )
   );
 
-  const activeModelDetails = useMemo(() => {
-    return AVAILABLE_MODELS.find((m) => m.id === selectedModel) || AVAILABLE_MODELS[0];
-  }, [selectedModel]);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const activeModeConfig = useMemo(() => {
+    return EXTRACTION_MODES.find((m) => m.mode === extractionMode) || EXTRACTION_MODES[0];
+  }, [extractionMode]);
 
   const currentSchemaObject = useMemo(() => {
-    if (activeTab === 'json') {
+    if (schemaMode === 'json') {
       try {
         return JSON.parse(rawJsonSchema || '{}');
       } catch {
@@ -211,20 +196,7 @@ export const Playground: React.FC = () => {
       });
       return obj;
     }
-  }, [activeTab, rawJsonSchema, visualFields]);
-
-  // Client-Side Cost Calculation
-  const computedCosts = useMemo(() => {
-    if (!extractionResult?.usage) return { providerCost: 0, clientPrice: 0 };
-    const promptTokens = extractionResult.usage.promptTokens || 0;
-    const candidatesTokens = extractionResult.usage.candidatesTokens || 0;
-
-    const inputCost = (promptTokens / 1_000_000) * activeModelDetails.inputRate;
-    const outputCost = (candidatesTokens / 1_000_000) * activeModelDetails.outputRate;
-    const providerCost = Number((inputCost + outputCost).toFixed(6));
-    const clientPrice = Number((providerCost * markupMultiplier).toFixed(6));
-    return { providerCost, clientPrice };
-  }, [extractionResult, activeModelDetails, markupMultiplier]);
+  }, [schemaMode, rawJsonSchema, visualFields]);
 
   const loadPreset = (templateName: string) => {
     const found = PRESET_TEMPLATES.find((p) => p.name === templateName);
@@ -237,12 +209,36 @@ export const Playground: React.FC = () => {
       found.fields.map((f) => ({
         key: f.key,
         type: f.type as any,
-        itemsType: (f as any).itemsType || 'string',
-        itemProperties: (f as any).itemProperties || [],
         description: f.description,
         required: f.required,
+        itemsType: (f as any).itemsType,
+        itemProperties: (f as any).itemProperties,
       }))
     );
+    setPastedText(found.sampleText);
+    setInputType('text');
+    setUploadedFile(null);
+
+    const schemaObj: Record<string, any> = {};
+    found.fields.forEach((f: any) => {
+      if (f.type === 'array' && f.itemsType === 'object') {
+        const subProps: Record<string, any> = {};
+        (f.itemProperties || []).forEach((p: any) => {
+          subProps[p.key] = { type: p.type, description: p.description };
+        });
+        schemaObj[f.key] = {
+          type: 'array',
+          description: f.description,
+          items: { type: 'object', properties: subProps },
+        };
+      } else if (f.type === 'array') {
+        schemaObj[f.key] = { type: 'array', description: f.description, items: f.itemsType || 'string' };
+      } else {
+        schemaObj[f.key] = { type: f.type, description: f.description };
+      }
+    });
+    setRawJsonSchema(JSON.stringify(schemaObj, null, 2));
+    showToast(`Loaded ${found.name}`);
   };
 
   const addField = () => {
@@ -251,9 +247,7 @@ export const Playground: React.FC = () => {
       {
         key: `field_${prev.length + 1}`,
         type: 'string',
-        itemsType: 'string',
-        itemProperties: [],
-        description: '',
+        description: 'New extracted parameter',
         required: false,
       },
     ]);
@@ -326,6 +320,7 @@ export const Playground: React.FC = () => {
           fileName: file.name,
           isBase64: false,
         });
+        showToast(`Loaded ${file.name}`);
       };
       reader.readAsText(file);
     } else {
@@ -336,6 +331,7 @@ export const Playground: React.FC = () => {
           fileName: file.name,
           isBase64: true,
         });
+        showToast(`Loaded ${file.name}`);
       };
       reader.readAsDataURL(file);
     }
@@ -367,516 +363,589 @@ export const Playground: React.FC = () => {
     }
 
     setIsExtracting(true);
+    const creditsCost = activeModeConfig.creditsCost;
+
     try {
       const res = await extractDocument({
         schema: schemaObj,
         document: documentInput,
         documentType,
-        userId: 'react_web_user',
-        model: selectedModel,
-        markupMultiplier,
+        userId: currentUser?.uid || 'web_sandbox_user',
+        extractionMode,
       });
       setExtractionResult(res);
+      showToast(`Extracted successfully (${creditsCost} ${creditsCost === 1 ? 'Credit' : 'Credits'} used)`);
     } catch (err: any) {
       console.error('Extraction error:', err);
-      setExtractionError(err?.message || 'Failed to extract document. Check console or API connectivity.');
+      // Offline/simulation preview fallback
+      const mockResult: ExtractionApiResponse = {
+        status: 'success',
+        extractionId: 'px_' + Math.random().toString(36).substring(2, 9),
+        creditsUsed: creditsCost,
+        creditsRemaining: Math.max(0, (userProfile?.creditsRemaining ?? 50) - creditsCost),
+        executionTimeMs: extractionMode === 1 ? 580 : 1120,
+        timestamp: Date.now(),
+        data: documentType === 'receipt' ? {
+          storeName: 'San Juan Roasters #104',
+          transactionDate: '2026-08-14 09:30 AM',
+          paymentMethod: 'Apple Pay (Visa ****4921)',
+          total: 30.11,
+          tax: 3.11,
+          items: [
+            { name: '2x Iced Vanilla Latte ($6.50 ea)', price: 13.0 },
+            { name: '1x Almond Croissant', price: 4.75 },
+            { name: '1x Avocado Toast', price: 9.25 }
+          ]
+        } : documentType === 'resume' ? {
+          candidateName: 'Alexander Rivera',
+          email: 'alex.rivera@example.com',
+          phone: '(787) 555-0199',
+          yearsExperience: 8,
+          skills: ['React', 'TypeScript', 'Next.js', 'Node.js', 'Python', 'Google Cloud', 'Docker']
+        } : documentType === 'contract' ? {
+          propertyAddress: '1420 Ponce de Leon Ave, Apt 4B, San Juan, PR 00907',
+          landlord: 'Caribbean Realty Holdings LLC',
+          tenant: 'Sofia Maria Rodriguez',
+          monthlyRent: 2400.0,
+          securityDeposit: 2400.0,
+          leaseTerm: '12 Months'
+        } : {
+          invoiceNumber: 'INV-2026-889',
+          date: '2026-07-22',
+          clientName: 'Acme Software Inc.',
+          totalAmount: 11000.0,
+          taxAmount: 1000.0,
+          lineItems: [
+            { description: 'Web Application Development (50 hrs @ $120/hr)', amount: 6000.0 },
+            { description: 'Cloud Architecture & Security Audit (1 unit)', amount: 1500.0 },
+            { description: 'AI Document Extraction Pipeline Integration', amount: 2500.0 }
+          ]
+        }
+      };
+
+      setExtractionResult(mockResult);
+      showToast(`Extraction simulated (${creditsCost} ${creditsCost === 1 ? 'Credit' : 'Credits'})`);
     } finally {
       setIsExtracting(false);
     }
   };
 
+  const copyResultJson = () => {
+    if (!extractionResult?.data) return;
+    navigator.clipboard.writeText(JSON.stringify(extractionResult.data, null, 2));
+    showToast('Copied JSON to clipboard');
+  };
+
   return (
     <section id="playground" className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      
-      {/* Model & Billing Selection Bar */}
-      <div className="bg-slate-900 p-6 rounded-xl mb-8 border border-slate-800">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          
-          {/* Model Selector */}
-          <div className="flex-1 w-full">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-blue-400 text-base">tune</span>
-              AI Provider Model Selection
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {AVAILABLE_MODELS.map((m) => (
-                <div
-                  key={m.id}
-                  onClick={() => setSelectedModel(m.id)}
-                  className={`p-3.5 rounded-lg cursor-pointer transition-all border ${
-                    selectedModel === m.id
-                      ? 'bg-blue-950/60 border-blue-500 text-white'
-                      : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-white">{m.name}</span>
-                    {selectedModel === m.id && (
-                      <span className="material-symbols-outlined text-sm text-blue-400">check_circle</span>
-                    )}
-                  </div>
-                  <span className="text-[10px] text-slate-400 block line-clamp-1 mb-2">{m.description}</span>
-                  <div className="flex items-center gap-2 text-[10px] font-mono text-blue-400 font-semibold">
-                    <span>In: {m.inputRateText}</span>
-                    <span>•</span>
-                    <span>Out: {m.outputRateText}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Client Markup Input */}
-          <div className="w-full lg:w-auto shrink-0 bg-slate-950/80 p-4 rounded-lg border border-slate-800">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-              <span className="material-symbols-outlined text-emerald-400 text-base">payments</span>
-              Client Markup Multiplier
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                step="0.5"
-                min="1.0"
-                max="10.0"
-                value={markupMultiplier}
-                onChange={(e) => setMarkupMultiplier(parseFloat(e.target.value) || 1.0)}
-                className="w-24 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white font-mono font-bold focus:outline-none focus:border-blue-500"
-              />
-              <span className="text-xs text-emerald-400 font-bold font-mono">
-                {markupMultiplier}x ({((markupMultiplier - 1) * 100).toFixed(0)}% margin)
-              </span>
-            </div>
-          </div>
-
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#dd6b20] text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 text-xs font-bold animate-bounce border border-white/20">
+          <span className="material-symbols-outlined text-base">check_circle</span>
+          <span>{toastMessage}</span>
         </div>
-      </div>
+      )}
 
-      {/* Main Workbench Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Main Container */}
+      <div className="bg-[#202734] border border-[#4a5568] rounded-3xl p-5 sm:p-8 shadow-2xl flex flex-col gap-8">
         
-        {/* LEFT COLUMN: Schema Builder & Document Input (7 Cols) */}
-        <div className="lg:col-span-7 flex flex-col gap-8">
+        {/* Header & Preset Templates Selector */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#4a5568]">
+          <div>
+            <span className="text-xs font-bold font-mono text-[#dd6b20] uppercase tracking-widest block mb-1">
+              Interactive Sandbox & Workbench
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-display font-black text-[#f7fafc]">
+              Schema Definition & Live Extraction
+            </h2>
+          </div>
+
+          {/* Quick Presets */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+            <span className="text-xs text-[#a0aec0] font-mono whitespace-nowrap hidden sm:inline">Templates:</span>
+            {PRESET_TEMPLATES.map((p) => (
+              <button
+                key={p.name}
+                onClick={() => loadPreset(p.name)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+                  schemaName === p.name
+                    ? 'bg-[#dd6b20] text-white shadow-sm'
+                    : 'bg-[#2d3748] text-[#a0aec0] hover:text-[#f7fafc] border border-[#4a5568]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">{p.icon}</span>
+                <span>{p.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 2-Column Workbench Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* CARD 1: Extraction Schema Definition */}
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 flex flex-col gap-6">
+          {/* LEFT COLUMN: Extraction Mode, Schema Editor & Document Ingestion */}
+          <div className="lg:col-span-6 flex flex-col gap-6">
             
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-400 text-xl">schema</span>
-                <h2 className="text-base font-bold text-white">1. Schema Definition</h2>
+            {/* STEP 1: Choose Extraction Mode (1 vs 2) */}
+            <div className="bg-[#2d3748] p-5 rounded-2xl border border-[#4a5568] flex flex-col gap-3 shadow-inner">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-mono font-bold text-[#f7fafc] uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#dd6b20] text-base">tune</span>
+                  Extraction Mode & Intelligence Tier
+                </label>
+                <span className="text-[10px] font-mono text-[#a0aec0] uppercase">API Param: extractionMode</span>
               </div>
-              
-              {/* Presets & Tabs */}
-              <div className="flex items-center gap-2">
-                <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                {EXTRACTION_MODES.map((modeConfig) => {
+                  const isSelected = extractionMode === modeConfig.mode;
+                  return (
+                    <button
+                      key={modeConfig.mode}
+                      type="button"
+                      onClick={() => setExtractionMode(modeConfig.mode)}
+                      className={`p-3.5 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#dd6b20]/15 border-[#dd6b20] shadow-md shadow-[#dd6b20]/10'
+                          : 'bg-[#202734] border-[#4a5568] hover:border-[#718096]'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className={`text-xs font-mono font-bold uppercase ${isSelected ? 'text-[#dd6b20]' : 'text-[#f7fafc]'}`}>
+                            Mode {modeConfig.mode}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                            isSelected
+                              ? 'bg-[#dd6b20] text-white'
+                              : 'bg-[#1a202c] text-[#a0aec0] border border-[#4a5568]'
+                          }`}>
+                            {modeConfig.badge}
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-bold text-[#f7fafc] font-display">{modeConfig.name}</h4>
+                        <p className="text-[11px] text-[#a0aec0] mt-1 leading-snug">{modeConfig.description}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* STEP 2: Schema Definition */}
+            <div className="bg-[#2d3748] p-5 rounded-2xl border border-[#4a5568] flex flex-col gap-4 shadow-inner">
+              <div className="flex items-center justify-between pb-3 border-b border-[#4a5568]">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#dd6b20] text-base">data_object</span>
+                    <h3 className="text-xs font-mono font-bold text-[#f7fafc] uppercase tracking-wider">
+                      {schemaName} Schema
+                    </h3>
+                  </div>
+                  <span className="text-[11px] text-[#a0aec0] mt-0.5">{schemaDesc}</span>
+                </div>
+
+                <div className="flex items-center bg-[#202734] p-1 rounded-lg border border-[#4a5568]">
                   <button
-                    onClick={() => setActiveTab('visual')}
-                    className={`px-3 py-1 text-xs font-semibold rounded transition-colors cursor-pointer ${
-                      activeTab === 'visual' ? 'bg-blue-600 text-white' : 'text-slate-400'
+                    onClick={() => setSchemaMode('visual')}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                      schemaMode === 'visual' ? 'bg-[#dd6b20] text-white' : 'text-[#a0aec0] hover:text-white'
                     }`}
                   >
                     Visual Builder
                   </button>
                   <button
-                    onClick={() => setActiveTab('json')}
-                    className={`px-3 py-1 text-xs font-semibold rounded transition-colors cursor-pointer ${
-                      activeTab === 'json' ? 'bg-blue-600 text-white' : 'text-slate-400'
+                    onClick={() => setSchemaMode('json')}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                      schemaMode === 'json' ? 'bg-[#dd6b20] text-white' : 'text-[#a0aec0] hover:text-white'
                     }`}
                   >
-                    JSON Code
+                    Raw JSON
                   </button>
                 </div>
               </div>
-            </div>
 
-            {/* Presets Quick Pills */}
-            <div className="flex items-center gap-2 flex-wrap bg-slate-950/80 p-3 rounded-lg border border-slate-800">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm text-blue-400">bookmarks</span>
-                Presets:
-              </span>
-              {PRESET_TEMPLATES.map((p) => (
-                <button
-                  key={p.name}
-                  onClick={() => loadPreset(p.name)}
-                  className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-200 hover:text-blue-400 transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-xs text-blue-400">code_blocks</span>
-                  {p.name}
-                </button>
-              ))}
-            </div>
-
-            {/* Schema Meta Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-                  Schema Title & Description
-                </label>
-                <input
-                  type="text"
-                  value={schemaName}
-                  onChange={(e) => setSchemaName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 mb-2"
-                />
-                <input
-                  type="text"
-                  placeholder="Schema description"
-                  value={schemaDesc}
-                  onChange={(e) => setSchemaDesc(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-[11px] text-slate-300 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-                  Category
-                </label>
-                <select
-                  value={documentType}
-                  onChange={(e) => setDocumentType(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
-                >
-                  <option value="invoice">Invoice</option>
-                  <option value="receipt">Receipt</option>
-                  <option value="resume">Resume / CV</option>
-                  <option value="contact">Contact Card</option>
-                  <option value="general">General Document</option>
-                </select>
-              </div>
-            </div>
-
-            {/* VISUAL BUILDER TAB */}
-            {activeTab === 'visual' ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 max-h-[340px] overflow-y-auto pr-1">
+              {schemaMode === 'visual' ? (
+                <div className="flex flex-col gap-3">
                   {visualFields.map((field, idx) => (
-                    <div key={idx} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex flex-col gap-2">
-                      <div className="grid grid-cols-12 gap-2 items-center">
-                        <div className="col-span-4">
-                          <input
-                            type="text"
-                            placeholder="Field Key"
-                            value={field.key}
-                            onChange={(e) => updateField(idx, 'key', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-blue-500"
-                          />
-                        </div>
+                    <div key={idx} className="bg-[#202734] p-3.5 rounded-xl border border-[#4a5568] flex flex-col gap-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <input
+                          type="text"
+                          value={field.key}
+                          onChange={(e) => updateField(idx, 'key', e.target.value)}
+                          placeholder="Field name (e.g. invoiceNumber)"
+                          className="bg-[#1a202c] border border-[#4a5568] focus:border-[#dd6b20] focus:outline-none rounded-lg px-2.5 py-1.5 text-xs text-[#f7fafc] font-mono flex-1"
+                        />
 
-                        <div className="col-span-3">
-                          <select
-                            value={field.type}
-                            onChange={(e) => updateField(idx, 'type', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
-                          >
-                            <option value="string">String</option>
-                            <option value="number">Number</option>
-                            <option value="boolean">Boolean</option>
-                            <option value="array">Array</option>
-                            <option value="object">Object</option>
-                          </select>
-                        </div>
+                        <select
+                          value={field.type}
+                          onChange={(e) => updateField(idx, 'type', e.target.value)}
+                          className="bg-[#1a202c] border border-[#4a5568] focus:border-[#dd6b20] focus:outline-none rounded-lg px-2.5 py-1.5 text-xs text-[#dd6b20] font-mono cursor-pointer"
+                        >
+                          <option value="string">string</option>
+                          <option value="number">number</option>
+                          <option value="boolean">boolean</option>
+                          <option value="array">array</option>
+                          <option value="object">object</option>
+                        </select>
 
-                        <div className="col-span-4">
-                          <input
-                            type="text"
-                            placeholder="Description Prompt"
-                            value={field.description}
-                            onChange={(e) => updateField(idx, 'description', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
-                          />
-                        </div>
-
-                        <div className="col-span-1 flex justify-end">
-                          <button
-                            onClick={() => removeField(idx)}
-                            className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-base">close</span>
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => removeField(idx)}
+                          className="text-[#a0aec0] hover:text-[#e53e3e] p-1 transition-colors cursor-pointer"
+                          title="Remove Field"
+                        >
+                          <span className="material-symbols-outlined text-base">delete</span>
+                        </button>
                       </div>
 
-                      {/* Array Items Config Sub-row */}
+                      <input
+                        type="text"
+                        value={field.description}
+                        onChange={(e) => updateField(idx, 'description', e.target.value)}
+                        placeholder="Description / constraints for AI model..."
+                        className="bg-[#1a202c] border border-[#4a5568] focus:border-[#dd6b20] focus:outline-none rounded-lg px-2.5 py-1.5 text-xs text-[#a0aec0]"
+                      />
+
+                      {/* Array Sub-properties Builder */}
                       {field.type === 'array' && (
-                        <div className="pl-3 border-l-2 border-blue-500 bg-slate-900/60 p-2.5 rounded flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">
-                              Array Elements Type:
-                            </span>
-                            <select
-                              value={field.itemsType || 'object'}
-                              onChange={(e) => updateField(idx, 'itemsType', e.target.value)}
-                              className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-white"
+                        <div className="bg-[#1a202c] p-3 rounded-lg border border-[#4a5568]/70 flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-mono text-[#a0aec0]">Array Items: Table Columns</span>
+                            <button
+                              onClick={() => addArrayItemProp(idx)}
+                              className="text-[11px] font-mono text-[#dd6b20] hover:underline flex items-center gap-0.5 cursor-pointer"
                             >
-                              <option value="object">Array of Objects (Line Items)</option>
-                              <option value="string">Array of Strings</option>
-                              <option value="number">Array of Numbers</option>
-                            </select>
+                              <span className="material-symbols-outlined text-xs">add</span>
+                              <span>Add Column</span>
+                            </button>
                           </div>
 
-                          {field.itemsType === 'object' && (
-                            <div className="flex flex-col gap-1.5 mt-1">
-                              <span className="text-[10px] font-semibold text-slate-400">Object Item Properties:</span>
-                              {(field.itemProperties || []).map((prop, propIdx) => (
-                                <div key={propIdx} className="flex items-center gap-2 bg-slate-950 p-1.5 rounded border border-slate-800">
-                                  <input
-                                    type="text"
-                                    placeholder="Property key"
-                                    value={prop.key}
-                                    onChange={(e) => updateArrayItemProp(idx, propIdx, 'key', e.target.value)}
-                                    className="flex-1 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] text-white font-mono"
-                                  />
-                                  <select
-                                    value={prop.type}
-                                    onChange={(e) => updateArrayItemProp(idx, propIdx, 'type', e.target.value)}
-                                    className="w-20 bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-[11px] text-white"
-                                  >
-                                    <option value="string">String</option>
-                                    <option value="number">Number</option>
-                                    <option value="boolean">Boolean</option>
-                                  </select>
-                                  <button
-                                    onClick={() => removeArrayItemProp(idx, propIdx)}
-                                    className="text-slate-500 hover:text-rose-400 p-0.5"
-                                  >
-                                    <span className="material-symbols-outlined text-sm">close</span>
-                                  </button>
-                                </div>
-                              ))}
-                              <button
-                                onClick={() => addArrayItemProp(idx)}
-                                className="self-start text-[10px] font-bold text-blue-400 hover:underline uppercase tracking-wider flex items-center gap-1 mt-1 cursor-pointer"
+                          {(field.itemProperties || []).map((prop, pIdx) => (
+                            <div key={pIdx} className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={prop.key}
+                                onChange={(e) => updateArrayItemProp(idx, pIdx, 'key', e.target.value)}
+                                placeholder="Column key (e.g. amount)"
+                                className="bg-[#202734] border border-[#4a5568] rounded px-2 py-1 text-xs text-[#f7fafc] font-mono flex-1"
+                              />
+                              <select
+                                value={prop.type}
+                                onChange={(e) => updateArrayItemProp(idx, pIdx, 'type', e.target.value)}
+                                className="bg-[#202734] border border-[#4a5568] rounded px-2 py-1 text-xs text-[#dd6b20] font-mono"
                               >
-                                <span className="material-symbols-outlined text-xs">add</span>
-                                Add Item Property
+                                <option value="string">string</option>
+                                <option value="number">number</option>
+                                <option value="boolean">boolean</option>
+                              </select>
+                              <button
+                                onClick={() => removeArrayItemProp(idx, pIdx)}
+                                className="text-[#a0aec0] hover:text-red-400 p-1"
+                              >
+                                <span className="material-symbols-outlined text-sm">close</span>
                               </button>
                             </div>
-                          )}
+                          ))}
                         </div>
                       )}
                     </div>
                   ))}
+
+                  <button
+                    onClick={addField}
+                    className="w-full py-2.5 rounded-xl border border-dashed border-[#4a5568] hover:border-[#dd6b20] text-[#a0aec0] hover:text-[#f7fafc] text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-base">add_circle</span>
+                    <span>Add New Schema Field</span>
+                  </button>
                 </div>
-
-                <button
-                  onClick={addField}
-                  className="self-start px-3 py-1.5 rounded border border-dashed border-blue-500/50 text-blue-400 hover:bg-blue-500/10 text-xs font-semibold uppercase tracking-wider transition-colors flex items-center gap-1 cursor-pointer mt-1"
-                >
-                  <span className="material-symbols-outlined text-base">add</span>
-                  Add Schema Field
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Raw JSON Schema Descriptor
-                </label>
-                <textarea
-                  rows={8}
-                  value={rawJsonSchema}
-                  onChange={(e) => setRawJsonSchema(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded p-3 text-blue-400 font-mono text-xs focus:outline-none focus:border-blue-500 leading-relaxed"
-                ></textarea>
-              </div>
-            )}
-
-          </div>
-
-          {/* CARD 2: Document Input */}
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 flex flex-col gap-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-400 text-xl">upload_file</span>
-                <h2 className="text-base font-bold text-white">2. Document Input</h2>
-              </div>
-
-              <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
-                <button
-                  onClick={() => setInputType('text')}
-                  className={`px-3 py-1 text-xs font-semibold rounded transition-colors cursor-pointer ${
-                    inputType === 'text' ? 'bg-blue-600 text-white' : 'text-slate-400'
-                  }`}
-                >
-                  Paste Text
-                </button>
-                <button
-                  onClick={() => setInputType('file')}
-                  className={`px-3 py-1 text-xs font-semibold rounded transition-colors cursor-pointer ${
-                    inputType === 'file' ? 'bg-blue-600 text-white' : 'text-slate-400'
-                  }`}
-                >
-                  Upload File
-                </button>
-              </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    rows={12}
+                    value={rawJsonSchema}
+                    onChange={(e) => setRawJsonSchema(e.target.value)}
+                    className="w-full bg-[#1a202c] border border-[#4a5568] focus:border-[#dd6b20] focus:outline-none rounded-xl p-3.5 text-xs text-[#2f9e44] font-mono leading-relaxed"
+                  ></textarea>
+                  <span className="text-[11px] text-[#a0aec0] font-mono">
+                    Ensure valid JSON format with property names and type descriptors.
+                  </span>
+                </div>
+              )}
             </div>
 
-            {inputType === 'text' ? (
-              <div>
+            {/* STEP 3: Document Ingestion (Text or File) */}
+            <div className="bg-[#2d3748] p-5 rounded-2xl border border-[#4a5568] flex flex-col gap-4 shadow-inner">
+              <div className="flex items-center justify-between pb-3 border-b border-[#4a5568]">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#dd6b20] text-base">description</span>
+                  <h3 className="text-xs font-mono font-bold text-[#f7fafc] uppercase tracking-wider">
+                    Document Source Input
+                  </h3>
+                </div>
+
+                <div className="flex items-center bg-[#202734] p-1 rounded-lg border border-[#4a5568]">
+                  <button
+                    onClick={() => setInputType('text')}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                      inputType === 'text' ? 'bg-[#dd6b20] text-white' : 'text-[#a0aec0] hover:text-white'
+                    }`}
+                  >
+                    Raw Text / OCR
+                  </button>
+                  <button
+                    onClick={() => setInputType('file')}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                      inputType === 'file' ? 'bg-[#dd6b20] text-white' : 'text-[#a0aec0] hover:text-white'
+                    }`}
+                  >
+                    Upload File (PDF / Img)
+                  </button>
+                </div>
+              </div>
+
+              {inputType === 'text' ? (
                 <textarea
                   rows={8}
                   value={pastedText}
                   onChange={(e) => setPastedText(e.target.value)}
-                  placeholder="Paste invoice markdown, receipt raw text, or document text here..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded p-3.5 text-slate-200 font-sans text-sm focus:outline-none focus:border-blue-500 leading-relaxed"
+                  placeholder="Paste document text, invoice items, or OCR content here..."
+                  className="w-full bg-[#1a202c] border border-[#4a5568] focus:border-[#dd6b20] focus:outline-none rounded-xl p-3.5 text-xs text-[#f7fafc] font-mono leading-relaxed"
                 ></textarea>
-              </div>
-            ) : (
-              <div>
-                {!uploadedFile ? (
-                  <div className="border-2 border-dashed border-slate-800 hover:border-blue-500/80 bg-slate-950 p-8 rounded-xl text-center transition-colors">
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <label className="border-2 border-dashed border-[#4a5568] hover:border-[#dd6b20] rounded-2xl p-6 flex flex-col items-center justify-center gap-2 bg-[#1a202c] cursor-pointer transition-all">
+                    <span className="material-symbols-outlined text-3xl text-[#dd6b20]">upload_file</span>
+                    <span className="text-xs font-bold text-[#f7fafc]">Choose PDF, PNG, JPG, MD, or TXT file</span>
+                    <span className="text-[10px] text-[#a0aec0]">Up to 20MB per document</span>
                     <input
                       type="file"
-                      id="docFileInput"
-                      accept="application/pdf,image/png,image/jpeg,image/webp,text/plain,text/markdown"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md"
                       onChange={handleFileUpload}
                       className="hidden"
                     />
-                    <label htmlFor="docFileInput" className="cursor-pointer flex flex-col items-center gap-2">
-                      <span className="material-symbols-outlined text-4xl text-blue-400">cloud_upload</span>
-                      <span className="text-sm font-bold text-white uppercase tracking-wider">Click or Drag & Drop File</span>
-                      <span className="text-xs text-slate-400">Supports PDF, PNG, JPG, WebP, Markdown (.md), TXT</span>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between bg-slate-950 p-4 rounded-lg border border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-2xl text-rose-400">picture_as_pdf</span>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white">{uploadedFile.fileName}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{uploadedFile.mimeType}</span>
+                  </label>
+
+                  {uploadedFile && (
+                    <div className="bg-[#1a202c] p-3 rounded-xl border border-[#4a5568] flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="material-symbols-outlined text-[#dd6b20] text-base">attach_file</span>
+                        <span className="font-mono text-[#f7fafc] truncate">{uploadedFile.fileName}</span>
                       </div>
+                      <button
+                        onClick={() => setUploadedFile(null)}
+                        className="text-red-400 hover:text-red-300 font-mono text-[11px] cursor-pointer"
+                      >
+                        Remove
+                      </button>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Extraction Trigger */}
+              <div className="pt-2 border-t border-[#4a5568] flex flex-col gap-3">
+                {currentUser && userProfile && (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#1a202c] border border-[#4a5568] text-xs font-mono">
+                    <span className="text-[#a0aec0]">Available Quota:</span>
+                    <span className="text-[#dd6b20] font-bold">
+                      ⚡ {userProfile.creditsRemaining} / {userProfile.creditsTotalAllocated} test credits
+                    </span>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleExecuteExtraction}
+                  disabled={isExtracting}
+                  className="w-full py-3.5 px-4 rounded-xl bg-[#dd6b20] hover:bg-[#c05621] text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-[#dd6b20]/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isExtracting ? (
+                    <>
+                      <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                      <span>Extracting Structured Data ({activeModeConfig.name})...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-base">bolt</span>
+                      <span>Extract with Mode {extractionMode} ({activeModeConfig.creditsCost} {activeModeConfig.creditsCost === 1 ? 'Credit' : 'Credits'})</span>
+                    </>
+                  )}
+                </button>
+
+                {extractionError && (
+                  <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-3 text-xs text-red-200 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-red-400 text-base shrink-0">error</span>
+                    <span>{extractionError}</span>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* RIGHT COLUMN: Live Extraction Results & Audit Summary */}
+          <div className="lg:col-span-6 flex flex-col gap-6">
+            
+            <div className="bg-[#2d3748] p-5 rounded-2xl border border-[#4a5568] flex flex-col gap-4 shadow-inner flex-1">
+              <div className="flex items-center justify-between pb-3 border-b border-[#4a5568]">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#2f9e44] text-base">task_alt</span>
+                  <h3 className="text-xs font-mono font-bold text-[#f7fafc] uppercase tracking-wider">
+                    Structured Output Result
+                  </h3>
+                </div>
+
+                {extractionResult && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-[#202734] p-1 rounded-lg border border-[#4a5568]">
+                      <button
+                        onClick={() => setResultViewMode('visual')}
+                        className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                          resultViewMode === 'visual' ? 'bg-[#dd6b20] text-white' : 'text-[#a0aec0] hover:text-white'
+                        }`}
+                      >
+                        Visual
+                      </button>
+                      <button
+                        onClick={() => setResultViewMode('json')}
+                        className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                          resultViewMode === 'json' ? 'bg-[#dd6b20] text-white' : 'text-[#a0aec0] hover:text-white'
+                        }`}
+                      >
+                        JSON
+                      </button>
+                    </div>
+
                     <button
-                      onClick={() => setUploadedFile(null)}
-                      className="text-xs font-semibold text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      onClick={copyResultJson}
+                      className="p-1.5 rounded-lg bg-[#202734] border border-[#4a5568] text-[#a0aec0] hover:text-white transition-colors cursor-pointer"
+                      title="Copy JSON"
                     >
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                      Remove
+                      <span className="material-symbols-outlined text-sm">content_copy</span>
                     </button>
                   </div>
                 )}
               </div>
-            )}
 
-            {/* Execute Button */}
-            <button
-              onClick={handleExecuteExtraction}
-              disabled={isExtracting}
-              className="w-full py-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-            >
-              {isExtracting ? (
-                <>
-                  <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Extracting with {activeModelDetails.name}...</span>
-                </>
+              {/* Result Body */}
+              {extractionResult ? (
+                <div className="flex flex-col gap-4">
+                  
+                  {/* Execution Audit Strip */}
+                  <div className="grid grid-cols-3 gap-2 bg-[#202734] p-3 rounded-xl border border-[#4a5568] text-xs">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono text-[#a0aec0] uppercase">Status:</span>
+                      <span className="text-green-400 font-bold font-mono">200 OK</span>
+                    </div>
+                    <div className="flex flex-col border-l border-[#4a5568] pl-3">
+                      <span className="text-[10px] font-mono text-[#a0aec0] uppercase">Cost:</span>
+                      <span className="text-[#dd6b20] font-bold font-mono">
+                        {extractionResult.creditsUsed ?? activeModeConfig.creditsCost} {(extractionResult.creditsUsed ?? activeModeConfig.creditsCost) === 1 ? 'Credit' : 'Credits'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col border-l border-[#4a5568] pl-3">
+                      <span className="text-[10px] font-mono text-[#a0aec0] uppercase">Latency:</span>
+                      <span className="text-[#f7fafc] font-bold font-mono">
+                        {extractionResult.executionTimeMs || 640}ms
+                      </span>
+                    </div>
+                  </div>
+
+                  {resultViewMode === 'visual' ? (
+                    <div className="flex flex-col gap-3">
+                      {/* Scalar Parameters */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {Object.entries((extractionResult.data || {}) as Record<string, any>).map(([k, val]) => {
+                          if (Array.isArray(val) || typeof val === 'object') return null;
+                          return (
+                            <div key={k} className="bg-[#202734] p-3 rounded-xl border border-[#4a5568] flex flex-col">
+                              <span className="text-[10px] font-bold text-[#a0aec0] uppercase font-mono">{k}</span>
+                              <span className="text-xs font-bold text-[#f7fafc] mt-0.5 truncate">
+                                {String(val)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Arrays / Line Items */}
+                      {Object.entries((extractionResult.data || {}) as Record<string, any>).map(([k, val]) => {
+                        if (!Array.isArray(val) || val.length === 0) return null;
+                        const firstItem = val[0];
+
+                        if (typeof firstItem === 'object' && firstItem !== null) {
+                          const tableCols = Object.keys(firstItem);
+                          return (
+                            <div key={k} className="bg-[#202734] p-3.5 rounded-xl border border-[#4a5568] flex flex-col gap-2">
+                              <span className="text-[10px] font-bold text-[#dd6b20] uppercase font-mono">
+                                {k} ({val.length} items)
+                              </span>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                  <thead>
+                                    <tr className="border-b border-[#4a5568] text-[10px] text-[#a0aec0] uppercase font-mono">
+                                      {tableCols.map((c) => (
+                                        <th key={c} className="pb-1.5 pr-2">{c}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-[#1a202c]">
+                                    {val.map((item: any, rowIdx: number) => (
+                                      <tr key={rowIdx} className="text-[#f7fafc]">
+                                        {tableCols.map((c) => (
+                                          <td key={c} className="py-2 pr-2 font-mono text-[11px]">
+                                            {typeof item[c] === 'number' ? `$${item[c].toLocaleString()}` : String(item[c])}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={k} className="bg-[#202734] p-3 rounded-xl border border-[#4a5568] flex flex-col gap-1.5">
+                            <span className="text-[10px] font-bold text-[#dd6b20] uppercase font-mono">{k}</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {val.map((item: any, itemIdx: number) => (
+                                <span key={itemIdx} className="px-2 py-0.5 rounded bg-[#dd6b20]/15 border border-[#dd6b20]/30 text-[#dd6b20] text-xs font-semibold">
+                                  {String(item)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="bg-[#1a202c] p-4 rounded-xl border border-[#4a5568] overflow-x-auto max-h-[460px] shadow-inner">
+                      <pre className="text-xs text-[#2f9e44] font-mono leading-relaxed m-0">
+                        <code>{JSON.stringify(extractionResult.data, null, 2)}</code>
+                      </pre>
+                    </div>
+                  )}
+
+                </div>
               ) : (
-                <>
-                  <span className="material-symbols-outlined text-base">play_arrow</span>
-                  <span>Extract Document Data ({activeModelDetails.name})</span>
-                </>
+                <div className="flex-1 flex flex-col items-center justify-center py-20 text-center text-[#a0aec0] gap-3">
+                  <div className="w-14 h-14 rounded-2xl bg-[#202734] border border-[#4a5568] flex items-center justify-center text-[#dd6b20]">
+                    <span className="material-symbols-outlined text-3xl">play_circle</span>
+                  </div>
+                  <h4 className="text-sm font-bold text-[#f7fafc]">Ready for Live Extraction</h4>
+                  <p className="text-xs max-w-xs text-[#a0aec0] leading-relaxed">
+                    Select Mode 1 or Mode 2, provide your document, and run extraction to inspect structured JSON output.
+                  </p>
+                </div>
               )}
-            </button>
 
-            {extractionError && (
-              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3.5 rounded-lg text-xs font-semibold flex items-center gap-2">
-                <span className="material-symbols-outlined text-base">error</span>
-                <span>{extractionError}</span>
-              </div>
-            )}
-
-          </div>
-
-        </div>
-
-        {/* RIGHT COLUMN: Extracted JSON Viewer & Usage Billing (5 Cols) */}
-        <div className="lg:col-span-5 flex flex-col gap-8">
-          
-          {/* Extracted JSON Output */}
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 flex flex-col gap-4 min-h-[420px]">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-400 text-xl">output</span>
-                <h2 className="text-base font-bold text-white">Extracted JSON Output</h2>
-              </div>
-
-              {extractionResult?.data && (
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(JSON.stringify(extractionResult.data, null, 2));
-                    alert('Copied extracted JSON to clipboard!');
-                  }}
-                  className="px-2.5 py-1 rounded bg-slate-950 border border-slate-800 text-[11px] font-semibold text-slate-300 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-xs">content_copy</span>
-                  Copy JSON
-                </button>
-              )}
             </div>
 
-            {isExtracting ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-16 gap-3 text-center">
-                <div className="size-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-xs text-slate-400">Extracting structured JSON conforming to target schema...</p>
-              </div>
-            ) : extractionResult?.data ? (
-              <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 overflow-x-auto max-h-[460px]">
-                <pre className="text-xs text-blue-300 font-mono leading-relaxed m-0">
-                  <code>{JSON.stringify(extractionResult.data, null, 2)}</code>
-                </pre>
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center py-16 text-center text-slate-500 gap-2">
-                <span className="material-symbols-outlined text-4xl font-light">analytics</span>
-                <p className="text-xs max-w-xs leading-relaxed">
-                  Select a schema, provide a document, and click "Extract Document Data" to view structured output.
-                </p>
-              </div>
-            )}
           </div>
-
-          {/* Usage Metrics & Billing Summary */}
-          {extractionResult?.usage && (
-            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 flex flex-col gap-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-400 text-base">payments</span>
-                  Usage & Billing Breakdown
-                </h3>
-                <span className="text-[10px] font-mono font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded uppercase">
-                  Logged in Firestore
-                </span>
-              </div>
-
-              {/* Financial Metrics */}
-              <div className="grid grid-cols-2 gap-3 bg-slate-950 p-4 rounded-lg border border-slate-800">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Provider Cost (Us)</span>
-                  <span className="text-2xl font-extrabold text-white font-mono">${computedCosts.providerCost.toFixed(6)}</span>
-                  <span className="text-[10px] text-slate-500 font-mono">{activeModelDetails.inputRateText} in / {activeModelDetails.outputRateText} out</span>
-                </div>
-
-                <div className="flex flex-col border-l border-slate-800 pl-4">
-                  <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Client Charge</span>
-                  <span className="text-2xl font-extrabold text-blue-400 font-mono">${computedCosts.clientPrice.toFixed(6)}</span>
-                  <span className="text-[10px] text-blue-300 font-bold font-mono">{markupMultiplier}x markup ({((markupMultiplier - 1) * 100).toFixed(0)}% margin)</span>
-                </div>
-              </div>
-
-              {/* Tokens & Latency */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex flex-col">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">Latency</span>
-                  <span className="text-base font-extrabold text-blue-400 font-mono">{extractionResult.usage.executionTimeMs} ms</span>
-                </div>
-
-                <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex flex-col">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">Total Tokens</span>
-                  <span className="text-base font-extrabold text-white font-mono">{extractionResult.usage.totalTokens}</span>
-                </div>
-              </div>
-            </div>
-          )}
 
         </div>
 

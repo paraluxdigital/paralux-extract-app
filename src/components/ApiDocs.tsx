@@ -1,96 +1,157 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export const ApiDocs: React.FC = () => {
+  const [copied, setCopied] = useState(false);
+
   const sampleSuccessJson = JSON.stringify(
     {
       status: 'success',
+      extractionId: 'px_9f82kd019x',
       data: {
-        invoiceNumber: 'INV-2026-001',
-        clientName: 'Acme Global Enterprises Inc.',
-        totalAmount: 13562.5,
+        invoiceNumber: 'INV-2026-889',
+        date: '2026-07-22',
+        clientName: 'Acme Software Inc.',
+        totalAmount: 11000.0,
+        taxAmount: 1000.0,
+        lineItems: [
+          { description: 'Web Application Development (50 hrs @ $120/hr)', amount: 6000.0 },
+          { description: 'Cloud Architecture & Security Audit (1 unit)', amount: 1500.0 },
+          { description: 'AI Document Extraction Pipeline Integration', amount: 2500.0 }
+        ]
       },
-      usage: {
-        promptTokens: 700,
-        candidatesTokens: 48,
-        totalTokens: 748,
-        executionTimeMs: 1761,
-        model: 'gemini-3.1-flash-lite',
-        providerCostUsd: 0.000282,
-        clientPriceUsd: 0.000846,
-      },
-      extractionId: 'q8A9dK01Xy',
+      creditsUsed: 1,
+      creditsRemaining: 49,
+      executionTimeMs: 640,
+      timestamp: 1787184000000
     },
     null,
     2
   );
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(sampleSuccessJson);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
   return (
-    <section id="docs" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800 flex flex-col gap-8">
+    <section id="docs" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-[#2d3748] p-6 sm:p-8 rounded-3xl border border-[#4a5568] flex flex-col gap-8 shadow-lg">
         
-        <div className="pb-6 border-b border-slate-800">
-          <span className="text-xs font-bold font-mono text-purple-400 uppercase tracking-widest block mb-1">
-            REST API Specification
-          </span>
-          <h2 className="text-3xl font-extrabold text-white">Endpoint Reference: POST /api/extract</h2>
+        {/* Header */}
+        <div className="pb-6 border-b border-[#4a5568] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span className="text-xs font-bold font-mono text-[#dd6b20] uppercase tracking-widest block mb-1">
+              REST API Specification
+            </span>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-md bg-[#dd6b20]/20 text-[#dd6b20] border border-[#dd6b20]/40 text-xs font-mono font-bold uppercase">
+                POST
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-display font-black text-[#f7fafc] font-mono">/api/extract</h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#a0aec0] font-mono">Base URL:</span>
+            <code className="text-xs text-[#dd6b20] font-mono bg-[#202734] px-2.5 py-1 rounded-lg border border-[#4a5568]">
+              https://extract.paralux.digital
+            </code>
+          </div>
         </div>
 
-        {/* Request Specification */}
+        {/* Request Specification & Response */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          <div className="lg:col-span-6 flex flex-col gap-4">
-            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-              <span className="material-symbols-outlined text-indigo-400 text-base">input</span>
-              Request Headers & Parameters
+          {/* Request Headers & Payload Parameters */}
+          <div className="lg:col-span-6 flex flex-col gap-5">
+            <h3 className="text-sm font-bold text-[#f7fafc] uppercase tracking-wider flex items-center gap-2 font-display">
+              <span className="material-symbols-outlined text-[#dd6b20] text-base">input</span>
+              Request Headers & Authorization
             </h3>
 
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col gap-3">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
-                <span className="text-xs font-bold text-white font-mono">Content-Type</span>
-                <span className="text-xs text-indigo-400 font-mono">application/json</span>
+            <div className="bg-[#202734] p-4 rounded-xl border border-[#4a5568] flex flex-col gap-3 shadow-inner">
+              <div className="flex items-center justify-between pb-2 border-b border-[#4a5568]">
+                <span className="text-xs font-bold text-[#f7fafc] font-mono">Content-Type</span>
+                <span className="text-xs text-[#dd6b20] font-mono">application/json</span>
               </div>
 
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
-                <span className="text-xs font-bold text-white font-mono">x-api-key</span>
-                <span className="text-xs text-slate-400 font-mono">px_live_... (API Key token)</span>
+              <div className="flex items-center justify-between pb-2 border-b border-[#4a5568]">
+                <span className="text-xs font-bold text-[#f7fafc] font-mono">x-api-key</span>
+                <span className="text-xs text-[#a0aec0] font-mono">px_live_... (Secret API key)</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white font-mono">x-user-id</span>
-                <span className="text-xs text-slate-400 font-mono">User / Tenant Identifier</span>
+                <span className="text-xs font-bold text-[#f7fafc] font-mono">x-user-id</span>
+                <span className="text-xs text-[#a0aec0] font-mono">User / Tenant identifier (optional)</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-3">
-              <span className="text-xs font-bold text-slate-300 uppercase">JSON Body Parameters</span>
+              <span className="text-xs font-bold text-[#a0aec0] uppercase tracking-wider font-mono">
+                JSON Body Payload
+              </span>
               
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col gap-3 text-xs">
+              <div className="bg-[#202734] p-4 rounded-xl border border-[#4a5568] flex flex-col gap-3.5 text-xs shadow-inner">
                 <div>
-                  <strong className="text-indigo-400 font-mono">schema (required)</strong>
-                  <p className="text-slate-400 mt-0.5">Zod or JSON schema object mapping requested keys to type & description properties.</p>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-[#dd6b20] font-mono text-xs">schema</strong>
+                    <span className="text-[10px] font-bold text-[#e53e3e] uppercase font-mono">required</span>
+                    <span className="text-[10px] text-[#a0aec0] font-mono">object</span>
+                  </div>
+                  <p className="text-[#a0aec0] mt-1 leading-relaxed">
+                    JSON schema mapping target keys to type definitions and field descriptions.
+                  </p>
                 </div>
 
-                <div className="pt-2 border-t border-slate-800">
-                  <strong className="text-indigo-400 font-mono">document (required)</strong>
-                  <p className="text-slate-400 mt-0.5">Plain text string, Markdown, or Object containing base64 string and mimeType for binary PDF/PNG files.</p>
+                <div className="pt-3 border-t border-[#4a5568]">
+                  <div className="flex items-center gap-2">
+                    <strong className="text-[#dd6b20] font-mono text-xs">document</strong>
+                    <span className="text-[10px] font-bold text-[#e53e3e] uppercase font-mono">required</span>
+                    <span className="text-[10px] text-[#a0aec0] font-mono">string | object</span>
+                  </div>
+                  <p className="text-[#a0aec0] mt-1 leading-relaxed">
+                    Raw text/Markdown string, or an object containing base64 string (<code>data</code>) and <code>mimeType</code> (e.g. <code>application/pdf</code>, <code>image/png</code>).
+                  </p>
                 </div>
 
-                <div className="pt-2 border-t border-slate-800">
-                  <strong className="text-indigo-400 font-mono">model (optional)</strong>
-                  <p className="text-slate-400 mt-0.5">Choice of <code>gemini-3.1-flash-lite</code> (default), <code>gemini-3.5-flash-lite</code>, or <code>gemini-3.6-flash</code>.</p>
+                <div className="pt-3 border-t border-[#4a5568]">
+                  <div className="flex items-center gap-2">
+                    <strong className="text-[#dd6b20] font-mono text-xs">extractionMode</strong>
+                    <span className="text-[10px] font-bold text-[#a0aec0] uppercase font-mono">optional (default: 1)</span>
+                    <span className="text-[10px] text-[#a0aec0] font-mono">integer (1 | 2)</span>
+                  </div>
+                  <p className="text-[#a0aec0] mt-1 leading-relaxed">
+                    <code>1</code> = Standard Extraction (1 Credit), <code>2</code> = Advanced Multimodal (2 Credits for complex tables and dense contracts).
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="lg:col-span-6 flex flex-col gap-4">
-            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-              <span className="material-symbols-outlined text-emerald-400 text-base">task_alt</span>
-              Success Response (HTTP 200 OK)
-            </h3>
+          {/* Success Response Preview */}
+          <div className="lg:col-span-6 flex flex-col gap-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#f7fafc] uppercase tracking-wider flex items-center gap-2 font-display">
+                <span className="material-symbols-outlined text-[#2f9e44] text-base">task_alt</span>
+                Success Response (HTTP 200 OK)
+              </h3>
 
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 overflow-x-auto">
-              <pre className="text-xs text-emerald-400 font-mono leading-relaxed m-0"><code>{sampleSuccessJson}</code></pre>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#202734] border border-[#4a5568] text-[11px] font-medium text-[#a0aec0] hover:text-white transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-xs text-[#dd6b20]">
+                  {copied ? 'check' : 'content_copy'}
+                </span>
+                <span>{copied ? 'Copied' : 'Copy'}</span>
+              </button>
+            </div>
+
+            <div className="bg-[#1a202c] p-4 rounded-xl border border-[#4a5568] overflow-x-auto shadow-inner max-h-[440px]">
+              <pre className="text-xs text-[#2f9e44] font-mono leading-relaxed m-0">
+                <code>{sampleSuccessJson}</code>
+              </pre>
             </div>
           </div>
 
