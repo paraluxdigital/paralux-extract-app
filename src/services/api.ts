@@ -6,7 +6,9 @@ const PROD_FALLBACK_API_URL = 'https://us-central1-paralux-extract.cloudfunction
 
 export async function extractDocument(payload: {
   schema: Record<string, any>;
-  document: string | { data: string; mimeType?: string };
+  document?: string | { data: string; mimeType?: string };
+  storagePath?: string;
+  storageUrl?: string;
   documentType?: string;
   userId?: string;
   apiKey?: string;
@@ -15,6 +17,8 @@ export async function extractDocument(payload: {
   const body = JSON.stringify({
     schema: payload.schema,
     document: payload.document,
+    storagePath: payload.storagePath,
+    storageUrl: payload.storageUrl,
     documentType: payload.documentType,
     extractionMode: payload.extractionMode || 1,
   });

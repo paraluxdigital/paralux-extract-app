@@ -7,6 +7,7 @@ export const ApiDocs: React.FC = () => {
     {
       status: 'success',
       extractionId: 'px_9f82kd019x',
+      modelUsed: 'Gemini 3.7 Flash',
       data: {
         invoiceNumber: 'INV-2026-889',
         date: '2026-07-22',
@@ -19,8 +20,8 @@ export const ApiDocs: React.FC = () => {
           { description: 'AI Document Extraction Pipeline Integration', amount: 2500.0 }
         ]
       },
-      creditsUsed: 1,
-      creditsRemaining: 49,
+      creditsUsed: 2,
+      creditsRemaining: 48,
       executionTimeMs: 640,
       timestamp: 1787184000000
     },
@@ -106,12 +107,12 @@ export const ApiDocs: React.FC = () => {
 
                 <div className="pt-3 border-t border-[#4a5568]">
                   <div className="flex items-center gap-2">
-                    <strong className="text-[#dd6b20] font-mono text-xs">document</strong>
-                    <span className="text-[10px] font-bold text-[#e53e3e] uppercase font-mono">required</span>
+                    <strong className="text-[#dd6b20] font-mono text-xs">document | storagePath</strong>
+                    <span className="text-[10px] font-bold text-[#e53e3e] uppercase font-mono">required (one of)</span>
                     <span className="text-[10px] text-[#a0aec0] font-mono">string | object</span>
                   </div>
                   <p className="text-[#a0aec0] mt-1 leading-relaxed">
-                    Raw text/Markdown string, or an object containing base64 string (<code>data</code>) and <code>mimeType</code> (e.g. <code>application/pdf</code>, <code>image/png</code>).
+                    Either raw text / base64 object (<code>document</code>) or a direct Cloud Storage path reference (<code>storagePath: "staging/user123/invoice.pdf"</code>).
                   </p>
                 </div>
 
@@ -122,9 +123,17 @@ export const ApiDocs: React.FC = () => {
                     <span className="text-[10px] text-[#a0aec0] font-mono">integer (1 | 2)</span>
                   </div>
                   <p className="text-[#a0aec0] mt-1 leading-relaxed">
-                    <code>1</code> = Standard Extraction (1 Credit), <code>2</code> = Advanced Multimodal (2 Credits for complex tables and dense contracts).
+                    <code>1</code> = <strong>Gemini 3.5 Flash Lite</strong> (1 Credit / 5 pages), <code>2</code> = <strong>Gemini 3.7 Flash</strong> (2 Credits / 5 pages for complex tables and dense contracts).
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* Storage Lifecycle Notice */}
+            <div className="bg-[#202734] p-4 rounded-xl border border-[#2f9e44]/40 flex items-center gap-3">
+              <span className="material-symbols-outlined text-[#2f9e44] text-xl shrink-0">verified_user</span>
+              <div className="text-xs text-[#a0aec0]">
+                <strong className="text-[#f7fafc]">24-Hour Ephemeral Retention:</strong> Uploaded documents in <code>staging/</code> auto-expire and are permanently deleted after 24 hours via GCS lifecycle rules. Zero storage costs billed.
               </div>
             </div>
           </div>

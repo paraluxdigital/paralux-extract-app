@@ -20,10 +20,17 @@ import {
   query,
   where,
   onSnapshot,
+  increment,
   type Firestore,
   type Unsubscribe,
 } from 'firebase/firestore';
-import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  type FirebaseStorage,
+} from 'firebase/storage';
 import type { UserProfile, ApiKeyItem, CreatedKeySecret } from '../types/auth';
 
 const firebaseConfig = {
@@ -232,3 +239,74 @@ export async function revokeApiKey(keyId: string): Promise<void> {
     revokedAt: Date.now(),
   });
 }
+
+/**
+ * Uploads a document directly to Firebase Storage with a 24-hour retention metadata tag.
+ * Bypasses sending heavy base64 strings directly through Cloud Function RAM.
+ */
+export async function uploadDocumentToStaging(
+  file: File,
+  userId: string,
+  onProgress?: (progressPct: number) => void
+): Promise<{ storagePath: string; downloadUrl: string; fileName: string; fileSize: number }> {
+  const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const docId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const storagePath = `staging/${userId}/${docId}_${cleanFileName}`;
+  const storageRef = ref(storage, storagePath);
+
+  const uploadTask = uploadBytesResumable(storageRef, file, {
+    contentType: file.type || 'application/pdf',
+    customMetadata: {
+      uploadedBy: userId,
+      uploadedAt: Date.now().toString(),
+      retentionPolicy: '24h-auto-expire',
+    },
+  });
+
+  return new Promise((resolve, reject) => {
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        if (snapshot.totalBytes > 0 && onProgress) {
+          const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          onProgress(pct);
+        }
+      },
+      (error) => {
+        console.error('Direct Storage upload error:', error);
+        reject(error);
+      },
+      async () => {
+        try {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve({
+            storagePath,
+            downloadUrl,
+            fileName: file.name,
+            fileSize: file.size,
+          });
+        } catch (err) {
+          reject(err);
+        }
+      }
+    );
+  });
+}
+
+/**
+ * Purchases a PAYG credit pack and adds credits to user balance atomically.
+ */
+export async function purchaseCreditPack(
+  userId: string,
+  _packId: string,
+  creditsToAdd: number
+): Promise<void> {
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, {
+    creditsRemaining: increment(creditsToAdd),
+    creditsTotalAllocated: increment(creditsToAdd),
+    tier: 'payg',
+    updatedAt: Date.now(),
+  });
+}
+

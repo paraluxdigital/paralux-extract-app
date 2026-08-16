@@ -4,6 +4,7 @@ import { Playground } from './Playground';
 import { ApiKeysManager } from './ApiKeysManager';
 import { CodeExporter } from './CodeExporter';
 import { ApiDocs } from './ApiDocs';
+import { CreditTopupModal } from './CreditTopupModal';
 
 interface UserPortalProps {
   onBackToLanding: () => void;
@@ -12,13 +13,28 @@ interface UserPortalProps {
 export const UserPortal: React.FC<UserPortalProps> = ({ onBackToLanding }) => {
   const { userProfile, openAuthModal, currentUser } = useAuth();
   const [portalTab, setPortalTab] = useState<'workbench' | 'keys' | 'docs' | 'snippets'>('workbench');
+  const [isTopupModalOpen, setIsTopupModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const creditsRemaining = userProfile?.creditsRemaining ?? 50;
   const creditsTotal = userProfile?.creditsTotalAllocated ?? 50;
 
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   return (
     <div className="pt-24 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-8">
       
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#2f9e44] text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 text-xs font-bold animate-bounce border border-white/20">
+          <span className="material-symbols-outlined text-base">check_circle</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Portal Top Bar */}
       <div className="bg-[#202734] border border-[#4a5568] rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-1/4 w-72 h-32 bg-[#dd6b20]/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -45,15 +61,24 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToLanding }) => {
         </div>
 
         {/* Portal Stats & Plan Overview */}
-        <div className="flex items-center gap-4 z-10">
+        <div className="flex items-center gap-4 z-10 flex-wrap">
           {currentUser && userProfile ? (
-            <div className="flex items-center gap-3 bg-[#1a202c] p-3 rounded-2xl border border-[#4a5568]">
+            <div className="flex items-center gap-3 bg-[#1a202c] p-2.5 sm:p-3 rounded-2xl border border-[#4a5568]">
               <div className="flex flex-col">
                 <span className="text-[10px] font-mono text-[#a0aec0] uppercase">Balance</span>
                 <span className="text-sm font-bold font-mono text-[#dd6b20]">
                   ⚡ {creditsRemaining} / {creditsTotal} credits
                 </span>
               </div>
+
+              <button
+                onClick={() => setIsTopupModalOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-[#dd6b20] hover:bg-[#c05621] text-white font-bold text-[10px] uppercase font-mono transition-all flex items-center gap-1 cursor-pointer"
+                title="Top up credits"
+              >
+                <span className="material-symbols-outlined text-xs">add</span>
+                <span>Top Up</span>
+              </button>
 
               <div className="h-8 w-px bg-[#4a5568]"></div>
 
@@ -134,6 +159,13 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToLanding }) => {
         {portalTab === 'docs' && <ApiDocs />}
         {portalTab === 'snippets' && <CodeExporter />}
       </div>
+
+      {/* Topup Modal */}
+      <CreditTopupModal
+        isOpen={isTopupModalOpen}
+        onClose={() => setIsTopupModalOpen(false)}
+        onSuccess={(added) => showToast(`Added ${added.toLocaleString()} credits to your account!`)}
+      />
 
     </div>
   );
