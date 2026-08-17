@@ -1,13 +1,13 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // 24-hour ephemeral staging documents
-    match /staging/{userId}/{allPaths=**} {
+    // 24-hour ephemeral ingestion documents
+    match /ephemeral/{userId}/{allPaths=**} {
       // Allow upload up to 25MB per document
       allow create: if request.resource.size < 25 * 1024 * 1024
                     && (request.auth != null || userId == 'web_sandbox_user');
       
-      // Allow user to read and delete their own staged files
+      // Allow user to read and delete their own ephemeral files
       allow read: if request.auth != null && (request.auth.uid == userId || userId == 'web_sandbox_user');
       allow delete: if request.auth != null && (request.auth.uid == userId || userId == 'web_sandbox_user');
     }

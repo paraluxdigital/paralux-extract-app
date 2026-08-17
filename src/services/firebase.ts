@@ -244,14 +244,14 @@ export async function revokeApiKey(keyId: string): Promise<void> {
  * Uploads a document directly to Firebase Storage with a 24-hour retention metadata tag.
  * Bypasses sending heavy base64 strings directly through Cloud Function RAM.
  */
-export async function uploadDocumentToStaging(
+export async function uploadDocumentToEphemeral(
   file: File,
   userId: string,
   onProgress?: (progressPct: number) => void
 ): Promise<{ storagePath: string; downloadUrl: string; fileName: string; fileSize: number }> {
   const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
   const docId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const storagePath = `staging/${userId}/${docId}_${cleanFileName}`;
+  const storagePath = `ephemeral/${userId}/${docId}_${cleanFileName}`;
   const storageRef = ref(storage, storagePath);
 
   const uploadTask = uploadBytesResumable(storageRef, file, {
@@ -292,6 +292,9 @@ export async function uploadDocumentToStaging(
     );
   });
 }
+
+// Compatibility alias
+export const uploadDocumentToStaging = uploadDocumentToEphemeral;
 
 /**
  * Purchases a PAYG credit pack and adds credits to user balance atomically.

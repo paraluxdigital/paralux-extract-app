@@ -8,7 +8,7 @@ import {
   type ExtractionApiResponse,
 } from '../types/extraction';
 import { extractDocument } from '../services/api';
-import { uploadDocumentToStaging } from '../services/firebase';
+import { uploadDocumentToEphemeral } from '../services/firebase';
 import {
   calculatePreflightCost,
   getPdfPageCount,
@@ -410,7 +410,7 @@ export const Playground: React.FC = () => {
         if (rawFile) {
           try {
             setUploadProgress(10);
-            const uploadResult = await uploadDocumentToStaging(rawFile, userId, (pct) => {
+            const uploadResult = await uploadDocumentToEphemeral(rawFile, userId, (pct) => {
               setUploadProgress(pct);
             });
             storagePath = uploadResult.storagePath;

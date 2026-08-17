@@ -112,7 +112,7 @@ export const ApiDocs: React.FC = () => {
                     <span className="text-[10px] text-[#a0aec0] font-mono">string | object</span>
                   </div>
                   <p className="text-[#a0aec0] mt-1 leading-relaxed">
-                    Either raw text / base64 object (<code>document</code>) or a direct Cloud Storage path reference (<code>storagePath: "staging/user123/invoice.pdf"</code>).
+                    Either raw text / base64 object (<code>document</code>) or a direct Cloud Storage path reference (<code>storagePath: "ephemeral/user123/invoice.pdf"</code>).
                   </p>
                 </div>
 
@@ -133,7 +133,7 @@ export const ApiDocs: React.FC = () => {
             <div className="bg-[#202734] p-4 rounded-xl border border-[#2f9e44]/40 flex items-center gap-3">
               <span className="material-symbols-outlined text-[#2f9e44] text-xl shrink-0">verified_user</span>
               <div className="text-xs text-[#a0aec0]">
-                <strong className="text-[#f7fafc]">24-Hour Ephemeral Retention:</strong> Uploaded documents in <code>staging/</code> auto-expire and are permanently deleted after 24 hours via GCS lifecycle rules. Zero storage costs billed.
+                <strong className="text-[#f7fafc]">24-Hour Ephemeral Retention:</strong> Uploaded documents in <code>ephemeral/</code> auto-expire and are permanently deleted after 24 hours via GCS lifecycle rules. Zero storage costs billed.
               </div>
             </div>
           </div>
