@@ -22,10 +22,10 @@ export const Footer: React.FC = () => {
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
             <span className="text-sm font-black font-display text-[#f7fafc] tracking-tight group-hover:text-[#dd6b20] transition-colors">
-              Paralux Extract AI
+              Paralux Digital Extract
             </span>
             <span className="hidden sm:inline text-xs text-[#a0aec0]">•</span>
-            <span className="text-xs text-[#a0aec0]">Intelligent Document Extraction Platform</span>
+            <span className="text-xs text-[#a0aec0]">Document Extraction Software Platform</span>
           </div>
         </div>
 

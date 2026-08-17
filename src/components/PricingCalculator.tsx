@@ -123,7 +123,7 @@ export const PricingCalculator: React.FC = () => {
   }, [humanMonthlyCost, monthlySavings]);
 
   const hoursSavedPerMonth = useMemo(() => {
-    // Approx 4 minutes manual entry per document vs 1.5 seconds AI
+    // Approx 4 minutes manual entry per document vs 1.5 seconds automated extraction
     return Math.round((monthlyVolume * 4) / 60);
   }, [monthlyVolume]);
 
@@ -285,7 +285,7 @@ export const PricingCalculator: React.FC = () => {
                     <span className="font-mono text-[#a0aec0] line-through">${humanMonthlyCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-[#dd6b20] font-medium">Paralux Automated AI:</span>
+                    <span className="text-[#dd6b20] font-medium">Paralux Digital Extract:</span>
                     <span className="font-mono font-bold text-[#f7fafc]">${paraluxMonthlyCost}/mo</span>
                   </div>
                 </div>

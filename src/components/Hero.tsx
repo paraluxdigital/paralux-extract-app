@@ -24,7 +24,7 @@ export const Hero: React.FC = () => {
 
         {/* Subtitle */}
         <p className="text-base sm:text-lg text-[#a0aec0] max-w-2xl mx-auto font-normal leading-relaxed mb-10">
-          Extract validated, typed JSON data from PDF invoices, scanned receipts, medical summaries, and contracts with high-speed automated intelligence. Plans starting at <strong className="text-[#f7fafc] font-semibold">$20/mo for 1,000 document credits</strong> or pay-as-you-go.
+          Extract validated, typed JSON data from PDF invoices, scanned receipts, medical summaries, and contracts with high-speed automated software pipelines. Plans starting at <strong className="text-[#f7fafc] font-semibold">$20/mo for 1,000 document credits</strong> or pay-as-you-go.
         </p>
 
         {/* CTA Buttons */}

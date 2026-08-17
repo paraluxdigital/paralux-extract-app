@@ -22,7 +22,7 @@ const PRESET_TEMPLATES = [
     documentType: 'invoice',
     icon: 'receipt_long',
     description: 'Extracts invoice numbers, dates, client names, line items, and totals.',
-    sampleText: `PARALUX DIGITAL INVOICE\nInvoice Number: INV-2026-889\nDate: 2026-07-22\nClient Name: Acme Software Inc.\n\nItems:\n- Web Application Development (50 hrs @ $120/hr) = $6,000.00\n- Cloud Architecture & Security Audit (1 unit) = $1,500.00\n- AI Document Extraction Pipeline Integration = $2,500.00\n\nSubtotal: $10,000.00\nTax (10%): $1,000.00\nTotal Amount Due: $11,000.00`,
+    sampleText: `PARALUX DIGITAL INVOICE\nInvoice Number: INV-2026-889\nDate: 2026-07-22\nClient Name: Acme Software Inc.\n\nItems:\n- Web Application Development (50 hrs @ $120/hr) = $6,000.00\n- Cloud Architecture & Security Audit (1 unit) = $1,500.00\n- Document Extraction Pipeline Integration = $2,500.00\n\nSubtotal: $10,000.00\nTax (10%): $1,000.00\nTotal Amount Due: $11,000.00`,
     fields: [
       { key: 'invoiceNumber', type: 'string', description: 'Invoice unique identifier', required: true },
       { key: 'date', type: 'string', description: 'Invoice issuance date', required: true },
@@ -72,7 +72,7 @@ const PRESET_TEMPLATES = [
     documentType: 'resume',
     icon: 'badge',
     description: 'Extracts candidate name, email, phone, core skills, and experience.',
-    sampleText: `ALEXANDER RIVERA\nEmail: alex.rivera@example.com | Phone: (787) 555-0199 | San Juan, PR\nRole: Senior Full Stack Cloud Engineer (8+ Years Experience)\n\nCore Skills: React, TypeScript, Next.js, Node.js, Python, PostgreSQL, Google Cloud, Docker, AI Systems\n\nSummary:\nProven software architect with deep expertise in cloud architectures and AI extraction systems.`,
+    sampleText: `ALEXANDER RIVERA\nEmail: alex.rivera@example.com | Phone: (787) 555-0199 | San Juan, PR\nRole: Senior Full Stack Cloud Engineer (8+ Years Experience)\n\nCore Skills: React, TypeScript, Next.js, Node.js, Python, PostgreSQL, Google Cloud, Docker, Cloud Systems\n\nSummary:\nProven software architect with deep expertise in cloud architectures and document processing systems.`,
     fields: [
       { key: 'candidateName', type: 'string', description: 'Full name of candidate', required: true },
       { key: 'email', type: 'string', description: 'Email address', required: true },
@@ -471,7 +471,7 @@ export const Playground: React.FC = () => {
           email: 'alex.rivera@example.com',
           phone: '(787) 555-0199',
           yearsExperience: 8,
-          skills: ['React', 'TypeScript', 'Next.js', 'Node.js', 'Python', 'Google Cloud', 'Docker', 'AI Systems']
+          skills: ['React', 'TypeScript', 'Next.js', 'Node.js', 'Python', 'Google Cloud', 'Docker', 'Cloud Systems']
         } : documentType === 'contract' ? {
           propertyAddress: '1420 Ponce de Leon Ave, Apt 4B, San Juan, PR 00907',
           landlord: 'Caribbean Realty Holdings LLC',
@@ -488,7 +488,7 @@ export const Playground: React.FC = () => {
           lineItems: [
             { description: 'Web Application Development (50 hrs @ $120/hr)', amount: 6000.0 },
             { description: 'Cloud Architecture & Security Audit (1 unit)', amount: 1500.0 },
-            { description: 'AI Document Extraction Pipeline Integration', amount: 2500.0 }
+            { description: 'Document Extraction Pipeline Integration', amount: 2500.0 }
           ]
         }
       };
@@ -555,7 +555,7 @@ export const Playground: React.FC = () => {
         {/* Engine Mode Selection */}
         <div className="flex flex-col gap-3">
           <span className="text-xs font-bold text-[#a0aec0] uppercase tracking-wider font-mono">
-            Step 1: Select AI Model Engine & Ingestion Mode
+            Step 1: Select Extraction Engine & Ingestion Mode
           </span>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {EXTRACTION_MODES.map((cfg) => {

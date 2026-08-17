@@ -2,56 +2,32 @@
   "firestore": {
     "rules": "firestore.rules"
   },
-  "hosting": [
-    {
-      "target": "staging",
-      "public": "dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [
-        {
-          "source": "/api/extract",
-          "function": "extractionApi"
-        },
-        {
-          "source": "**",
-          "destination": "/index.html"
-        }
-      ],
-      "headers": [
-        {
-          "source": "**/*.@(js|css|woff2|png|jpg|jpeg|gif|webp|svg|ico)",
-          "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
-        },
-        {
-          "source": "/index.html",
-          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
-        }
-      ]
-    },
-    {
-      "target": "prod",
-      "public": "dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [
-        {
-          "source": "/api/extract",
-          "function": "extractionApi"
-        },
-        {
-          "source": "**",
-          "destination": "/index.html"
-        }
-      ],
-      "headers": [
-        {
-          "source": "**/*.@(js|css|woff2|png|jpg|jpeg|gif|webp|svg|ico)",
-          "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
-        },
-        {
-          "source": "/index.html",
-          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
-        }
-      ]
-    }
-  ]
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
+    "site": "paralux-extract",
+    "public": "dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "/api/extract",
+        "function": "extractionApi"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|woff2|png|jpg|jpeg|gif|webp|svg|ico)",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      },
+      {
+        "source": "/index.html",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      }
+    ]
+  }
 }

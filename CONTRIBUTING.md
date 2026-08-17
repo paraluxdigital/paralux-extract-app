@@ -76,7 +76,7 @@ Must be one of the following:
 - `extraction`: Document upload, extraction processing, and results preview.
 - `schema`: Zod schema compilation, field definitions, and schema library.
 - `ui`: Component layouts, modals, buttons, and theme styles.
-- `api`: AI Cloud Function HTTP requests and error handling.
+- `api`: Extraction Cloud Function HTTP requests and error handling.
 - `auth`: API key headers, session state, and permissions.
 - `i18n`: Internationalization and translation strings.
 

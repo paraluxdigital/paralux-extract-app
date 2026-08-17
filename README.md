@@ -1,6 +1,6 @@
-# Paralux Extract App
+# Paralux Digital Extract
 
-An enterprise-grade SaaS platform and developer portal for automated AI document data extraction powered by React 19, Vite, TypeScript, Tailwind CSS, and Cloud Firestore.
+An enterprise-grade SaaS platform and developer portal for automated document data extraction powered by React 19, Vite, TypeScript, Tailwind CSS, and Cloud Firestore.
 
 ---
 

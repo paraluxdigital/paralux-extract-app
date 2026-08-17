@@ -27,20 +27,20 @@ export const Navbar: React.FC = () => {
           <div className="relative size-9 rounded-xl bg-[#2d3748] border border-[#4a5568] flex items-center justify-center p-1.5 shadow-sm group-hover:border-[#dd6b20] transition-all">
             <img 
               src="/favicon.svg" 
-              alt="Paralux Digital" 
+              alt="Paralux Digital Extract" 
               className="size-full object-contain filter drop-shadow-[0_0_6px_rgba(221,107,32,0.4)]" 
             />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="font-display font-extrabold text-base tracking-tight text-[#f7fafc] group-hover:text-[#dd6b20] transition-colors">
-                Paralux
+                Paralux Digital
               </span>
               <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-[#dd6b20]/15 text-[#dd6b20] border border-[#dd6b20]/30 uppercase tracking-wide">
-                Extract AI
+                Extract
               </span>
             </div>
-            <span className="text-[10px] text-[#a0aec0] font-medium tracking-wider uppercase">Intelligent Document Extraction</span>
+            <span className="text-[10px] text-[#a0aec0] font-medium tracking-wider uppercase">Document Extraction Platform</span>
           </div>
         </div>
 

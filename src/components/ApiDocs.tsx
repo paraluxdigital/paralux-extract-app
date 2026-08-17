@@ -17,7 +17,7 @@ export const ApiDocs: React.FC = () => {
         lineItems: [
           { description: 'Web Application Development (50 hrs @ $120/hr)', amount: 6000.0 },
           { description: 'Cloud Architecture & Security Audit (1 unit)', amount: 1500.0 },
-          { description: 'AI Document Extraction Pipeline Integration', amount: 2500.0 }
+          { description: 'Document Extraction Pipeline Integration', amount: 2500.0 }
         ]
       },
       creditsUsed: 2,
