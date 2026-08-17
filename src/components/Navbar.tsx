@@ -1,31 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/useAuth';
+import { useNavigation } from '../context/useNavigation';
 
-interface NavbarProps {
-  currentView: 'landing' | 'portal';
-  setCurrentView: (view: 'landing' | 'portal') => void;
-  onNavigateSection?: (sectionId: string) => void;
-}
-
-export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onNavigateSection }) => {
+export const Navbar: React.FC = () => {
   const { currentUser, userProfile, openAuthModal, handleLogout } = useAuth();
+  const { currentView, activeSection, navigateToLanding, navigateToPortal } = useNavigation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   const handleNavSection = (sectionId: string) => {
-    if (currentView !== 'landing') {
-      setCurrentView('landing');
-      setTimeout(() => {
-        const el = document.getElementById(sectionId);
-        if (el) {
-          const offset = 80;
-          const pos = el.getBoundingClientRect().top + window.pageYOffset - offset;
-          window.scrollTo({ top: pos, behavior: 'smooth' });
-        }
-      }, 100);
-    } else if (onNavigateSection) {
-      onNavigateSection(sectionId);
-    }
+    navigateToLanding(sectionId);
     setMobileMenuOpen(false);
   };
 
@@ -38,10 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onN
         {/* Authentic Paralux Digital Brand Mark */}
         <div 
           className="flex items-center gap-3 cursor-pointer group" 
-          onClick={() => {
-            setCurrentView('landing');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
+          onClick={() => navigateToLanding()}
         >
           <div className="relative size-9 rounded-xl bg-[#2d3748] border border-[#4a5568] flex items-center justify-center p-1.5 shadow-sm group-hover:border-[#dd6b20] transition-all">
             <img 
@@ -68,25 +49,33 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onN
           <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-[#a0aec0]">
             <button
               onClick={() => handleNavSection('features')}
-              className="hover:text-[#f7fafc] transition-colors cursor-pointer"
+              className={`transition-colors cursor-pointer ${
+                activeSection === 'features' ? 'text-[#dd6b20] font-bold' : 'hover:text-[#f7fafc]'
+              }`}
             >
               Capabilities
             </button>
             <button
               onClick={() => handleNavSection('pricing')}
-              className="hover:text-[#f7fafc] transition-colors cursor-pointer"
+              className={`transition-colors cursor-pointer ${
+                activeSection === 'pricing' ? 'text-[#dd6b20] font-bold' : 'hover:text-[#f7fafc]'
+              }`}
             >
               Pricing & ROI
             </button>
             <button
               onClick={() => handleNavSection('docs')}
-              className="hover:text-[#f7fafc] transition-colors cursor-pointer"
+              className={`transition-colors cursor-pointer ${
+                activeSection === 'docs' ? 'text-[#dd6b20] font-bold' : 'hover:text-[#f7fafc]'
+              }`}
             >
               REST API
             </button>
             <button
               onClick={() => handleNavSection('snippets')}
-              className="hover:text-[#f7fafc] transition-colors cursor-pointer"
+              className={`transition-colors cursor-pointer ${
+                activeSection === 'snippets' ? 'text-[#dd6b20] font-bold' : 'hover:text-[#f7fafc]'
+              }`}
             >
               SDKs
             </button>
@@ -94,7 +83,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onN
         ) : (
           <div className="hidden md:flex items-center gap-2">
             <button
-              onClick={() => setCurrentView('landing')}
+              onClick={() => navigateToLanding()}
               className="px-3 py-1.5 rounded-xl bg-[#202734] border border-[#4a5568] hover:border-[#dd6b20] text-xs font-mono text-[#a0aec0] hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-sm">arrow_back</span>
@@ -108,7 +97,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onN
           
           {currentView === 'landing' && (
             <button
-              onClick={() => setCurrentView('portal')}
+              onClick={() => navigateToPortal('workbench')}
               className="px-4 py-2 rounded-xl bg-[#dd6b20] hover:bg-[#c05621] text-white font-bold text-xs shadow-md shadow-[#dd6b20]/20 transition-all flex items-center gap-1.5 cursor-pointer border border-[#dd6b20] hover:scale-[1.02] active:scale-[0.98]"
             >
               <span className="material-symbols-outlined text-base">terminal</span>
@@ -151,13 +140,24 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onN
 
                   <button
                     onClick={() => {
-                      setCurrentView('portal');
+                      navigateToPortal('workbench');
                       setUserDropdownOpen(false);
                     }}
                     className="w-full px-3 py-2 rounded-lg text-left text-xs text-[#f7fafc] hover:bg-[#2d3748] flex items-center gap-2 cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-sm text-[#dd6b20]">terminal</span>
-                    <span>Open Workbench Portal</span>
+                    <span className="material-symbols-outlined text-sm text-[#dd6b20]">tune</span>
+                    <span>Schema Workbench</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      navigateToPortal('keys');
+                      setUserDropdownOpen(false);
+                    }}
+                    className="w-full px-3 py-2 rounded-lg text-left text-xs text-[#f7fafc] hover:bg-[#2d3748] flex items-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm text-[#dd6b20]">vpn_key</span>
+                    <span>API Keys & Limits</span>
                   </button>
 
                   <button
@@ -168,7 +168,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onN
                     className="w-full px-3 py-2 rounded-lg text-left text-xs text-[#f7fafc] hover:bg-[#2d3748] flex items-center gap-2 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-sm text-[#2f9e44]">upgrade</span>
-                    <span>Upgrade Plan</span>
+                    <span>Upgrade Plan & Top Up</span>
                   </button>
 
                   <div className="h-px bg-[#4a5568] my-1"></div>
@@ -230,50 +230,88 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onN
             <>
               <button
                 onClick={() => {
-                  setCurrentView('portal');
+                  navigateToPortal('workbench');
                   setMobileMenuOpen(false);
                 }}
-                className="p-3 rounded-lg text-xs font-bold bg-[#dd6b20] text-white flex items-center gap-2"
+                className="p-3 rounded-lg text-xs font-bold bg-[#dd6b20] text-white flex items-center gap-2 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-base">terminal</span>
                 <span>Launch Developer Portal</span>
               </button>
               <button
                 onClick={() => handleNavSection('features')}
-                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left"
+                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left cursor-pointer"
               >
                 Capabilities
               </button>
               <button
                 onClick={() => handleNavSection('pricing')}
-                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left"
+                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left cursor-pointer"
               >
                 Pricing & ROI
               </button>
               <button
                 onClick={() => handleNavSection('docs')}
-                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left"
+                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left cursor-pointer"
               >
                 REST API
               </button>
               <button
                 onClick={() => handleNavSection('snippets')}
-                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left"
+                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left cursor-pointer"
               >
                 SDKs
               </button>
             </>
           ) : (
-            <button
-              onClick={() => {
-                setCurrentView('landing');
-                setMobileMenuOpen(false);
-              }}
-              className="p-3 rounded-lg text-xs font-bold bg-[#202734] border border-[#4a5568] text-white flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
-              <span>Back to Landing Page</span>
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  navigateToLanding();
+                  setMobileMenuOpen(false);
+                }}
+                className="p-3 rounded-lg text-xs font-bold bg-[#202734] border border-[#4a5568] text-white flex items-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">arrow_back</span>
+                <span>Back to Landing Page</span>
+              </button>
+              <button
+                onClick={() => {
+                  navigateToPortal('workbench');
+                  setMobileMenuOpen(false);
+                }}
+                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left cursor-pointer"
+              >
+                Workbench
+              </button>
+              <button
+                onClick={() => {
+                  navigateToPortal('keys');
+                  setMobileMenuOpen(false);
+                }}
+                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left cursor-pointer"
+              >
+                API Keys
+              </button>
+              <button
+                onClick={() => {
+                  navigateToPortal('docs');
+                  setMobileMenuOpen(false);
+                }}
+                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left cursor-pointer"
+              >
+                API Specs
+              </button>
+              <button
+                onClick={() => {
+                  navigateToPortal('snippets');
+                  setMobileMenuOpen(false);
+                }}
+                className="p-3 rounded-lg text-xs font-semibold text-[#a0aec0] hover:bg-[#2d3748] text-left cursor-pointer"
+              >
+                SDK Snippets
+              </button>
+            </>
           )}
 
           <div className="pt-3 border-t border-[#4a5568] flex items-center justify-between">
@@ -283,7 +321,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onN
                   setMobileMenuOpen(false);
                   await handleLogout();
                 }}
-                className="text-xs text-red-400 font-bold"
+                className="text-xs text-red-400 font-bold cursor-pointer"
               >
                 Sign Out ({currentUser.email})
               </button>
@@ -293,7 +331,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onN
                   setMobileMenuOpen(false);
                   openAuthModal('login');
                 }}
-                className="w-full py-2 bg-[#dd6b20] text-white rounded-lg text-xs font-bold"
+                className="w-full py-2 bg-[#dd6b20] text-white rounded-lg text-xs font-bold cursor-pointer"
               >
                 Sign In / Get 50 Free Credits
               </button>

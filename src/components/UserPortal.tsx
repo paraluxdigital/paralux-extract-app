@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/useAuth';
+import { useNavigation } from '../context/useNavigation';
 import { Playground } from './Playground';
 import { ApiKeysManager } from './ApiKeysManager';
 import { CodeExporter } from './CodeExporter';
 import { ApiDocs } from './ApiDocs';
 import { CreditTopupModal } from './CreditTopupModal';
 
-interface UserPortalProps {
-  onBackToLanding: () => void;
-}
+const TAB_TITLES: Record<string, string> = {
+  workbench: 'Schema Workbench',
+  keys: 'API Keys & Limits',
+  docs: 'REST API Specs',
+  snippets: 'SDK Code Snippets',
+};
 
-export const UserPortal: React.FC<UserPortalProps> = ({ onBackToLanding }) => {
+export const UserPortal: React.FC = () => {
   const { userProfile, openAuthModal, currentUser } = useAuth();
-  const [portalTab, setPortalTab] = useState<'workbench' | 'keys' | 'docs' | 'snippets'>('workbench');
+  const { portalTab, navigateToPortal, navigateToLanding } = useNavigation();
   const [isTopupModalOpen, setIsTopupModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -40,16 +44,26 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToLanding }) => {
         <div className="absolute top-0 right-1/4 w-72 h-32 bg-[#dd6b20]/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="flex flex-col gap-1 z-10">
-          <div className="flex items-center gap-2">
+          {/* Breadcrumbs with URL Navigation */}
+          <div className="flex items-center gap-2 text-xs font-mono text-[#a0aec0] flex-wrap">
             <button
-              onClick={onBackToLanding}
-              className="text-xs font-mono text-[#a0aec0] hover:text-[#f7fafc] flex items-center gap-1 transition-colors cursor-pointer"
+              onClick={() => navigateToLanding()}
+              className="hover:text-[#f7fafc] flex items-center gap-1 transition-colors cursor-pointer"
             >
-              <span className="material-symbols-outlined text-sm">arrow_back</span>
-              <span>Landing Page</span>
+              <span className="material-symbols-outlined text-sm">home</span>
+              <span>Home</span>
             </button>
             <span className="text-[#4a5568]">/</span>
-            <span className="text-xs font-mono text-[#dd6b20] font-bold uppercase">Developer Portal</span>
+            <button
+              onClick={() => navigateToPortal('workbench')}
+              className="hover:text-[#f7fafc] transition-colors cursor-pointer font-bold text-[#dd6b20]"
+            >
+              Developer Portal
+            </button>
+            <span className="text-[#4a5568]">/</span>
+            <span className="text-[#f7fafc] font-semibold">
+              {TAB_TITLES[portalTab] || 'Workbench'}
+            </span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-display font-black text-[#f7fafc] mt-1">
@@ -101,13 +115,13 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToLanding }) => {
         </div>
       </div>
 
-      {/* Portal Tabs Bar */}
+      {/* Portal Tabs Bar (Synchronized with URL) */}
       <div className="flex items-center gap-2 bg-[#202734] p-1.5 rounded-2xl border border-[#4a5568] overflow-x-auto max-w-full shadow-inner">
         <button
-          onClick={() => setPortalTab('workbench')}
+          onClick={() => navigateToPortal('workbench')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
             portalTab === 'workbench'
-              ? 'bg-[#dd6b20] text-white shadow-sm'
+              ? 'bg-[#dd6b20] text-white shadow-md'
               : 'text-[#a0aec0] hover:text-[#f7fafc] hover:bg-[#2d3748]'
           }`}
         >
@@ -116,10 +130,10 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToLanding }) => {
         </button>
 
         <button
-          onClick={() => setPortalTab('keys')}
+          onClick={() => navigateToPortal('keys')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
             portalTab === 'keys'
-              ? 'bg-[#dd6b20] text-white shadow-sm'
+              ? 'bg-[#dd6b20] text-white shadow-md'
               : 'text-[#a0aec0] hover:text-[#f7fafc] hover:bg-[#2d3748]'
           }`}
         >
@@ -128,10 +142,10 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToLanding }) => {
         </button>
 
         <button
-          onClick={() => setPortalTab('docs')}
+          onClick={() => navigateToPortal('docs')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
             portalTab === 'docs'
-              ? 'bg-[#dd6b20] text-white shadow-sm'
+              ? 'bg-[#dd6b20] text-white shadow-md'
               : 'text-[#a0aec0] hover:text-[#f7fafc] hover:bg-[#2d3748]'
           }`}
         >
@@ -140,10 +154,10 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToLanding }) => {
         </button>
 
         <button
-          onClick={() => setPortalTab('snippets')}
+          onClick={() => navigateToPortal('snippets')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
             portalTab === 'snippets'
-              ? 'bg-[#dd6b20] text-white shadow-sm'
+              ? 'bg-[#dd6b20] text-white shadow-md'
               : 'text-[#a0aec0] hover:text-[#f7fafc] hover:bg-[#2d3748]'
           }`}
         >
