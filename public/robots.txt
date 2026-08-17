@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /portal/keys
+
+Sitemap: https://extract.paralux.digital/sitemap.xml
+Sitemap: https://paralux-extract.web.app/sitemap.xml

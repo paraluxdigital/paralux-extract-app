@@ -1,0 +1,17 @@
+{
+  "name": "Paralux Extract AI",
+  "short_name": "Paralux Extract",
+  "description": "Automated Multimodal Document Extraction Platform & REST API",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a202c",
+  "theme_color": "#dd6b20",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

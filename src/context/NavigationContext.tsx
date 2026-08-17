@@ -5,6 +5,18 @@ import {
   type PortalTab,
 } from './navigationContextDef';
 
+const PAGE_TITLES: Record<string, string> = {
+  landing: 'Paralux Extract AI — Automated Document Extraction Platform & API',
+  'landing-pricing': 'Pricing & ROI Simulator | Paralux Extract AI',
+  'landing-features': 'Features & Capabilities | Paralux Extract AI',
+  'landing-docs': 'REST API Specs | Paralux Extract AI',
+  'landing-snippets': 'SDK Code Snippets | Paralux Extract AI',
+  'portal-workbench': 'Schema Workbench | Paralux Extract AI',
+  'portal-keys': 'API Keys & Limits | Paralux Extract AI',
+  'portal-docs': 'REST API Documentation | Paralux Extract AI',
+  'portal-snippets': 'SDK Code Snippets | Paralux Extract AI',
+};
+
 function parseUrlState(): { view: ViewMode; tab: PortalTab; section: string | null } {
   if (typeof window === 'undefined') {
     return { view: 'landing', tab: 'workbench', section: null };
@@ -41,6 +53,18 @@ function parseUrlState(): { view: ViewMode; tab: PortalTab; section: string | nu
 
 export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [navState, setNavState] = useState(parseUrlState);
+
+  // Dynamic SEO Page Title synchronization
+  useEffect(() => {
+    let key = 'landing';
+    if (navState.view === 'portal') {
+      key = `portal-${navState.tab}`;
+    } else if (navState.section) {
+      key = `landing-${navState.section}`;
+    }
+    const targetTitle = PAGE_TITLES[key] || PAGE_TITLES.landing;
+    document.title = targetTitle;
+  }, [navState.view, navState.tab, navState.section]);
 
   const scrollToElement = useCallback((elementId: string) => {
     setTimeout(() => {
