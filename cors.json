@@ -1,0 +1,15 @@
+[
+  {
+    "origin": [
+      "https://extract.paraluxdigital.com",
+      "https://paralux-extract.web.app",
+      "https://paralux-extract.firebaseapp.com",
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:5173"
+    ],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    "responseHeader": ["*"],
+    "maxAgeSeconds": 3600
+  }
+]
