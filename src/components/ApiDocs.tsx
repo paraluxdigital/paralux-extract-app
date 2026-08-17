@@ -7,7 +7,7 @@ export const ApiDocs: React.FC = () => {
     {
       status: 'success',
       extractionId: 'px_9f82kd019x',
-      modelUsed: 'Gemini 3.7 Flash',
+      extractionMode: 2,
       data: {
         invoiceNumber: 'INV-2026-889',
         date: '2026-07-22',
@@ -123,7 +123,7 @@ export const ApiDocs: React.FC = () => {
                     <span className="text-[10px] text-[#a0aec0] font-mono">integer (1 | 2)</span>
                   </div>
                   <p className="text-[#a0aec0] mt-1 leading-relaxed">
-                    <code>1</code> = <strong>Gemini 3.5 Flash Lite</strong> (1 Credit / 5 pages), <code>2</code> = <strong>Gemini 3.7 Flash</strong> (2 Credits / 5 pages for complex tables and dense contracts).
+                    <code>1</code> = <strong>Standard Extraction</strong> (1 Credit / 5 pages), <code>2</code> = <strong>Advanced Multimodal</strong> (2 Credits / 5 pages for complex tables and dense contracts).
                   </p>
                 </div>
               </div>

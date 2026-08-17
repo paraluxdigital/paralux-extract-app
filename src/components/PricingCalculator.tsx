@@ -21,7 +21,7 @@ const CLIENT_PLANS: PlanTier[] = [
     costPerDoc: 0.020,
     features: [
       '1,000 Document Credits / mo',
-      'Mode 1 (Gemini 3.5 Flash Lite) & Mode 2 (3.7 Flash)',
+      'Mode 1 (Standard) & Mode 2 (Advanced Multimodal)',
       '1 Credit = Up to 5 pages per doc',
       'PDF, PNG, JPG, WebP, MD, TXT support',
       '24h Ephemeral Storage ($0 storage fee)',
@@ -38,8 +38,8 @@ const CLIENT_PLANS: PlanTier[] = [
     features: [
       '5,000 Document Credits / mo',
       '1 Credit = Up to 5 pages per doc',
-      'Multimodal PDF & High-Res Vision (Gemini 3.7 Flash)',
-      'Priority Mode 1 & Mode 2 Multimodal Access',
+      'Multimodal PDF & High-Res Document Vision',
+      'Priority Mode 1 & Mode 2 Access',
       'Unlimited Schemas in Firestore',
       '24h Ephemeral Storage ($0 storage fee)',
       'Priority 24/7 Support SLA',
@@ -487,16 +487,16 @@ export const PricingCalculator: React.FC = () => {
           {/* Model Consumption & Zero-Storage-Fee Guarantee */}
           <div className="bg-[#202734] p-6 rounded-2xl border border-[#4a5568] grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-bold text-[#dd6b20] uppercase font-mono">Mode 1: Gemini 3.5 Flash Lite</span>
+              <span className="text-xs font-bold text-[#dd6b20] uppercase font-mono">Mode 1: Standard Extraction</span>
               <p className="text-xs text-[#a0aec0]">
-                High-speed extraction at <strong>1 credit per 1-5 pages</strong>. Optimized for invoices, receipts, and forms.
+                High-speed extraction at <strong>1 credit per 1-5 pages</strong>. Optimized for invoices, receipts, and standard forms.
               </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-bold text-[#dd6b20] uppercase font-mono">Mode 2: Gemini 3.7 Flash</span>
+              <span className="text-xs font-bold text-[#dd6b20] uppercase font-mono">Mode 2: Advanced Multimodal</span>
               <p className="text-xs text-[#a0aec0]">
-                Frontier multimodal vision at <strong>2 credits per 1-5 pages</strong>. Ideal for complex contracts, dense financial tables, and low-res scans.
+                Deep visual parsing at <strong>2 credits per 1-5 pages</strong>. Ideal for complex contracts, dense financial tables, and low-res scans.
               </p>
             </div>
 

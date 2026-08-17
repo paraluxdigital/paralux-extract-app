@@ -188,8 +188,8 @@ export const ApiKeysManager: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#a0aec0]">Default AI Engine:</span>
-                  <span className="font-mono text-[#dd6b20] font-bold">Gemini 3.1 Flash-Lite</span>
+                  <span className="text-[#a0aec0]">Default Ingestion:</span>
+                  <span className="font-mono text-[#dd6b20] font-bold">Mode 1 (Standard)</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[#a0aec0]">Max Document Size:</span>

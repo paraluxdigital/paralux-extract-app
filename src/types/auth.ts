@@ -20,8 +20,8 @@ export const CREDIT_PACKS: CreditPack[] = [
     features: [
       '500 Document Credits',
       'Never Expire • Prepaid',
-      'Mode 1 (Gemini 3.5 Flash Lite)',
-      'Mode 2 (Gemini 3.7 Flash)',
+      'Mode 1 (Standard Extraction)',
+      'Mode 2 (Advanced Multimodal)',
       'Direct REST API Access',
     ],
   },
@@ -35,7 +35,7 @@ export const CREDIT_PACKS: CreditPack[] = [
     features: [
       '1,000 Document Credits',
       'Never Expire • Prepaid',
-      'Priority Mode 2 Multimodal Vision',
+      'Priority Advanced Multimodal Mode',
       'Auto-Refill Option Available',
       'Developer Webhook Integration',
     ],
@@ -49,8 +49,8 @@ export const CREDIT_PACKS: CreditPack[] = [
     features: [
       '3,000 Document Credits',
       'Never Expire • Prepaid',
-      'Lowest Pay-Per-Use Unit Cost ($0.020/cr)',
-      'Priority Queue & Rate Limits',
+      'Lowest Pay-Per-Use Rate ($0.020/cr)',
+      'Priority High-Throughput Queues',
       'Email & Slack Support SLA',
     ],
   },

@@ -72,7 +72,7 @@ const PRESET_TEMPLATES = [
     documentType: 'resume',
     icon: 'badge',
     description: 'Extracts candidate name, email, phone, core skills, and experience.',
-    sampleText: `ALEXANDER RIVERA\nEmail: alex.rivera@example.com | Phone: (787) 555-0199 | San Juan, PR\nRole: Senior Full Stack Cloud Engineer (8+ Years Experience)\n\nCore Skills: React, TypeScript, Next.js, Node.js, Python, PostgreSQL, Google Cloud, Docker, Gemini AI\n\nSummary:\nProven software architect with deep expertise in cloud architectures and AI extraction systems.`,
+    sampleText: `ALEXANDER RIVERA\nEmail: alex.rivera@example.com | Phone: (787) 555-0199 | San Juan, PR\nRole: Senior Full Stack Cloud Engineer (8+ Years Experience)\n\nCore Skills: React, TypeScript, Next.js, Node.js, Python, PostgreSQL, Google Cloud, Docker, AI Systems\n\nSummary:\nProven software architect with deep expertise in cloud architectures and AI extraction systems.`,
     fields: [
       { key: 'candidateName', type: 'string', description: 'Full name of candidate', required: true },
       { key: 'email', type: 'string', description: 'Email address', required: true },
@@ -165,7 +165,6 @@ export const Playground: React.FC = () => {
       pageCount: metrics.pageCount,
       mode: extractionMode,
       userBalance,
-      estimatedInputTokens: metrics.estimatedInputTokens,
     });
   }, [inputType, rawFile, pastedText, detectedPageCount, extractionMode, userBalance]);
 
@@ -451,7 +450,7 @@ export const Playground: React.FC = () => {
       const mockResult: ExtractionApiResponse = {
         status: 'success',
         extractionId: 'px_' + Math.random().toString(36).substring(2, 9),
-        modelUsed: preflight.modelName,
+        extractionMode: extractionMode,
         creditsUsed: creditsCost,
         creditsRemaining: Math.max(0, userBalance - creditsCost),
         executionTimeMs: extractionMode === 1 ? 520 : 1080,
@@ -472,7 +471,7 @@ export const Playground: React.FC = () => {
           email: 'alex.rivera@example.com',
           phone: '(787) 555-0199',
           yearsExperience: 8,
-          skills: ['React', 'TypeScript', 'Next.js', 'Node.js', 'Python', 'Google Cloud', 'Docker', 'Gemini AI']
+          skills: ['React', 'TypeScript', 'Next.js', 'Node.js', 'Python', 'Google Cloud', 'Docker', 'AI Systems']
         } : documentType === 'contract' ? {
           propertyAddress: '1420 Ponce de Leon Ave, Apt 4B, San Juan, PR 00907',
           landlord: 'Caribbean Realty Holdings LLC',
@@ -585,7 +584,7 @@ export const Playground: React.FC = () => {
                     </div>
 
                     <div className="text-[11px] font-mono text-[#dd6b20] font-semibold mb-2">
-                      ⚡ Engine: {cfg.model} (${cfg.modelPricing.inputPerMillion}/1M in, ${cfg.modelPricing.outputPerMillion}/1M out)
+                      ⚡ Engine: {cfg.name} ({cfg.badge})
                     </div>
 
                     <p className="text-xs text-[#a0aec0] leading-relaxed mb-3">
@@ -864,9 +863,9 @@ export const Playground: React.FC = () => {
                   </div>
 
                   <div className="bg-[#1a202c] p-2 rounded-lg border border-[#4a5568]/60 flex flex-col">
-                    <span className="text-[9px] text-[#a0aec0] uppercase font-mono">Engine</span>
-                    <span className="font-bold text-[#dd6b20] font-mono mt-0.5 truncate" title={preflight.modelName}>
-                      {preflight.mode === 1 ? '3.5 Lite' : '3.7 Flash'}
+                    <span className="text-[9px] text-[#a0aec0] uppercase font-mono">Mode</span>
+                    <span className="font-bold text-[#dd6b20] font-mono mt-0.5 truncate" title={preflight.modeName}>
+                      {preflight.mode === 1 ? 'Standard' : 'Multimodal'}
                     </span>
                   </div>
 
@@ -911,7 +910,7 @@ export const Playground: React.FC = () => {
                     {isExtracting ? (
                       <>
                         <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                        <span>Extracting Structured Data ({preflight.modelName})...</span>
+                        <span>Extracting Structured Data ({preflight.modeName})...</span>
                       </>
                     ) : (
                       <>

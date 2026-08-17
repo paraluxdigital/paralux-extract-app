@@ -3,10 +3,8 @@ import type { ExtractionModeType } from '../types/extraction';
 export interface PreflightEstimate {
   pageCount: number;
   mode: ExtractionModeType;
-  modelName: string;
+  modeName: string;
   requiredCredits: number;
-  estimatedInputTokens: number;
-  estimatedOutputTokens: number;
   userBalance: number;
   canExecute: boolean;
   reason?: string;
@@ -45,63 +43,49 @@ export async function getPdfPageCount(file: File): Promise<number> {
 }
 
 /**
- * Calculates page count and token estimates for non-PDF inputs (images, text, markdown).
+ * Calculates page count estimates for non-PDF inputs (images, text, markdown).
  */
 export function estimateDocumentMetrics(
   inputType: 'text' | 'file',
   content: string | File | null,
   detectedPdfPages?: number
-): { pageCount: number; estimatedInputTokens: number } {
+): { pageCount: number } {
   if (inputType === 'file' && content instanceof File) {
     if (content.type === 'application/pdf' || content.name.endsWith('.pdf')) {
       const pages = detectedPdfPages || 1;
-      return {
-        pageCount: pages,
-        estimatedInputTokens: pages * 650 + 400, // ~650 tokens per page multimodal + 400 schema
-      };
+      return { pageCount: pages };
     }
     // Image files (PNG, JPG, WEBP, TIFF)
-    return {
-      pageCount: 1,
-      estimatedInputTokens: 750, // standard single image tokenization
-    };
+    return { pageCount: 1 };
   }
 
   // Pasted text / markdown / CSV
   const textStr = typeof content === 'string' ? content : '';
   const wordCount = textStr.trim().split(/\s+/).filter(Boolean).length;
-  const estimatedTokens = Math.max(200, Math.ceil(wordCount * 1.3) + 350);
   const estimatedPages = Math.max(1, Math.ceil(wordCount / 500));
 
-  return {
-    pageCount: estimatedPages,
-    estimatedInputTokens: estimatedTokens,
-  };
+  return { pageCount: estimatedPages };
 }
 
 /**
  * Computes deterministic credit consumption prior to submission.
  * Rule:
- *  - Mode 1 (Gemini 3.5 Flash Lite): 1 Credit per 1-5 pages
- *  - Mode 2 (Gemini 3.7 Flash): 2 Credits per 1-5 pages
+ *  - Mode 1 (Standard): 1 Credit per 1-5 pages
+ *  - Mode 2 (Advanced Multimodal): 2 Credits per 1-5 pages
  */
 export function calculatePreflightCost(params: {
   pageCount: number;
   mode: ExtractionModeType;
   userBalance: number;
-  estimatedInputTokens?: number;
 }): PreflightEstimate {
-  const { pageCount, mode, userBalance, estimatedInputTokens } = params;
+  const { pageCount, mode, userBalance } = params;
 
   const validPages = Math.max(1, pageCount);
   const baseRate = mode === 2 ? 2 : 1;
   const pageUnits = Math.ceil(validPages / 5);
   const requiredCredits = pageUnits * baseRate;
 
-  const modelName = mode === 2 ? 'Gemini 3.7 Flash' : 'Gemini 3.5 Flash Lite';
-  const inTokens = estimatedInputTokens || validPages * 650 + 400;
-  const outTokens = mode === 2 ? 600 : 350;
-
+  const modeName = mode === 2 ? 'Advanced Multimodal' : 'Standard Extraction';
   const canExecute = userBalance >= requiredCredits;
   const reason = !canExecute
     ? `Insufficient credits. This extraction requires ${requiredCredits} ${
@@ -112,10 +96,8 @@ export function calculatePreflightCost(params: {
   return {
     pageCount: validPages,
     mode,
-    modelName,
+    modeName,
     requiredCredits,
-    estimatedInputTokens: inTokens,
-    estimatedOutputTokens: outTokens,
     userBalance,
     canExecute,
     reason,
