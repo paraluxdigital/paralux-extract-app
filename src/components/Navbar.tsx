@@ -16,7 +16,7 @@ export const Navbar: React.FC = () => {
   const creditsRemaining = userProfile?.creditsRemaining ?? 50;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1a202c]/95 backdrop-blur-md border-b border-[#4a5568]/60 transition-all">
+    <header className="fixed top-0 left-0 right-0 z-40 bg-[#1a202c]/95 backdrop-blur-md border-b border-[#4a5568]/60 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
         {/* Authentic Paralux Digital Brand Mark */}

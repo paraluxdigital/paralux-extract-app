@@ -18,7 +18,7 @@ function AppContent() {
 
       <Navbar />
 
-      <main className="flex-1 relative z-10">
+      <main className="flex-1">
         {currentView === 'landing' ? <LandingPage /> : <UserPortal />}
       </main>
 
