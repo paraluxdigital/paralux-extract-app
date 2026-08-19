@@ -11,12 +11,13 @@ export const CodeExporter: React.FC = () => {
   -d '{
     "extractionMode": 1,
     "documentType": "invoice",
+    "queueIfInsufficient": true,
+    "webhookUrl": "https://api.yourcompany.com/webhooks/extraction",
     "schema": {
       "invoiceNumber": { "type": "string", "description": "Invoice unique identifier" },
       "totalAmount": { "type": "number", "description": "Total amount due in USD" },
       "lineItems": {
         "type": "array",
-        "description": "List of billed items",
         "items": {
           "type": "object",
           "properties": {
@@ -28,67 +29,97 @@ export const CodeExporter: React.FC = () => {
     },
     "document": "PARALUX DIGITAL INVOICE\\nINV-2026-889\\nTotal: $11,000.00"
   }'`,
-    node: `import fetch from 'node-fetch';
+    node: `// Production Node.js extraction with automatic exponential backoff retry
+async function extractWithRetry(payload: Record<string, any>, maxRetries = 3) {
+  const url = 'https://extract.paralux.digital/api/extract';
+  const apiKey = process.env.PARALUX_API_KEY || 'px_live_your_api_key_here';
 
-async function extractInvoice() {
-  const response = await fetch('https://extract.paralux.digital/api/extract', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': 'px_live_your_api_key_here',
-    },
-    body: JSON.stringify({
-      extractionMode: 1, // 1 = Standard (1 credit), 2 = Advanced (2 credits)
-      documentType: 'invoice',
-      schema: {
-        invoiceNumber: { type: 'string', description: 'Invoice number' },
-        totalAmount: { type: 'number', description: 'Total cost' },
-        lineItems: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              description: { type: 'string' },
-              amount: { type: 'number' },
-            },
-          },
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
         },
-      },
-      document: {
-        data: 'JVBERi0xLjQK...', // base64 encoded PDF or image
-        mimeType: 'application/pdf',
-      },
-    }),
-  });
+        body: JSON.stringify({
+          extractionMode: 1, // 1 = Standard (1 credit), 2 = Advanced (2 credits)
+          queueIfInsufficient: true, // Auto-queue for 24h if credits run out
+          ...payload,
+        }),
+      });
 
-  const result = await response.json();
-  console.log('Extracted Data:', result.data);
-  console.log('Credits Remaining:', result.creditsRemaining);
-}
+      // Handle 202 Queued (held until top-up)
+      if (res.status === 202) {
+        const queueInfo = await res.json();
+        console.warn('⚠️ Job queued awaiting credit topup:', queueInfo.jobId);
+        return queueInfo;
+      }
 
-extractInvoice();`,
-    python: `import requests
+      // Handle 402 Insufficient Balance
+      if (res.status === 402) {
+        const error = await res.json();
+        throw new Error(\`Insufficient credits! Top up at \${error.topupUrl}\`);
+      }
 
-url = "https://extract.paralux.digital/api/extract"
-headers = {
-    "Content-Type": "application/json",
-    "x-api-key": "px_live_your_api_key_here"
-}
+      // Retry on 429 (Rate Limit) or 503 (Temporary Server Error)
+      if (res.status === 429 || res.status >= 500) {
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500;
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+      }
 
-payload = {
-    "extractionMode": 1, # 1 = Standard (1 credit), 2 = Advanced (2 credits)
-    "documentType": "invoice",
-    "schema": {
-        "invoiceNumber": {"type": "string", "description": "Invoice number"},
-        "totalAmount": {"type": "number", "description": "Total cost"}
-    },
-    "document": "PARALUX DIGITAL INVOICE\\nINV-2026-889\\nTotal: $11,000.00"
-}
+      const data = await res.json();
+      return data;
+    } catch (err) {
+      if (attempt >= maxRetries) throw err;
+    }
+  }
+}`,
+    python: `import time
+import requests
 
-response = requests.post(url, json=payload, headers=headers)
-data = response.json()
-print("Extracted Data:", data.get("data"))
-print("Credits Consumed:", data.get("creditsUsed"))`,
+def extract_document(schema, document_content, mode=1, max_retries=3):
+    """
+    Extracts structured JSON from document with automated retry and balance handling.
+    """
+    url = "https://extract.paralux.digital/api/extract"
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": "px_live_your_api_key_here"
+    }
+    
+    payload = {
+        "extractionMode": mode,
+        "documentType": "invoice",
+        "queueIfInsufficient": True, # Holds in queue if balance runs out
+        "schema": schema,
+        "document": document_content
+    }
+
+    for attempt in range(max_retries + 1):
+        response = requests.post(url, json=payload, headers=headers)
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"✅ Success! Credits remaining: {result.get('creditsRemaining')}")
+            return result.get("data")
+            
+        elif response.status_code == 202:
+            print("⏳ 202 Accepted: Document queued awaiting credit topup.")
+            return response.json()
+            
+        elif response.status_code == 402:
+            err = response.json()
+            raise Exception(f"Insufficient credits. Top up at: {err.get('topupUrl')}")
+            
+        elif response.status_code in [429, 500, 503] and attempt < max_retries:
+            time.sleep((2 ** attempt) + 0.5)
+            continue
+            
+        response.raise_for_status()`,
     go: `package main
 
 import (
@@ -97,13 +128,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 func main() {
 	url := "https://extract.paralux.digital/api/extract"
 	payload := map[string]interface{}{
-		"extractionMode": 1,
-		"documentType":   "invoice",
+		"extractionMode":      1,
+		"queueIfInsufficient": true,
+		"documentType":        "invoice",
 		"schema": map[string]interface{}{
 			"invoiceNumber": map[string]string{"type": "string"},
 			"totalAmount":   map[string]string{"type": "number"},
@@ -116,7 +149,7 @@ func main() {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-api-key", "px_live_your_api_key_here")
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		panic(err)
@@ -144,7 +177,10 @@ func main() {
             <span className="text-xs font-bold font-mono text-[#dd6b20] uppercase tracking-widest block mb-1">
               Developer SDK & Integration
             </span>
-            <h2 className="text-2xl sm:text-3xl font-display font-black text-[#f7fafc]">Instant API Code Snippets</h2>
+            <h2 className="text-2xl sm:text-3xl font-display font-black text-[#f7fafc]">Production API Code Snippets</h2>
+            <p className="text-xs text-[#a0aec0] mt-1">
+              Copy-paste ready code samples with built-in retry backoff, queue handling, and zero-charge guarantees.
+            </p>
           </div>
 
           <div className="flex bg-[#202734] p-1 rounded-xl border border-[#4a5568]">

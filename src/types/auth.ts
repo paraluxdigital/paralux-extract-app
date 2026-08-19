@@ -66,6 +66,12 @@ export interface UserProfile {
   creditsTotalAllocated: number;
   totalExtractionsCount: number;
   monthlyExtractionsCount: number;
+  alertThreshold?: number;
+  alertEmail?: string;
+  webhookAlertUrl?: string;
+  lastLowBalanceAlertSentAt?: number;
+  dailyBurnRate?: number;
+  predictedRunwayDays?: number;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   createdAt: number;

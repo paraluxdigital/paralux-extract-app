@@ -313,3 +313,21 @@ export async function purchaseCreditPack(
   });
 }
 
+/**
+ * Updates low-balance threshold and alert notification preferences in Firestore.
+ */
+export async function updateUserAlertPreferences(
+  userId: string,
+  prefs: {
+    alertThreshold?: number;
+    alertEmail?: string;
+    webhookAlertUrl?: string;
+  }
+): Promise<void> {
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, {
+    ...prefs,
+    updatedAt: Date.now(),
+  });
+}
+

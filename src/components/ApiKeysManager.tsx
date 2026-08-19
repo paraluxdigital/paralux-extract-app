@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/useAuth';
-import { createApiKey, subscribeToUserApiKeys, revokeApiKey } from '../services/firebase';
+import { createApiKey, subscribeToUserApiKeys, revokeApiKey, updateUserAlertPreferences } from '../services/firebase';
 import type { ApiKeyItem, CreatedKeySecret } from '../types/auth';
 
 export const ApiKeysManager: React.FC = () => {
@@ -13,6 +13,21 @@ export const ApiKeysManager: React.FC = () => {
   const [createdSecret, setCreatedSecret] = useState<CreatedKeySecret | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
   const [revokeConfirmId, setRevokeConfirmId] = useState<string | null>(null);
+
+  // Low-Balance & Runway Alert Preferences State
+  const [thresholdInput, setThresholdInput] = useState<number>(userProfile?.alertThreshold ?? 50);
+  const [alertEmailInput, setAlertEmailInput] = useState(userProfile?.alertEmail || userProfile?.email || '');
+  const [webhookUrlInput, setWebhookUrlInput] = useState(userProfile?.webhookAlertUrl || '');
+  const [isSavingPrefs, setIsSavingPrefs] = useState(false);
+  const [savedPrefsSuccess, setSavedPrefsSuccess] = useState(false);
+
+  useEffect(() => {
+    if (userProfile) {
+      setThresholdInput(userProfile.alertThreshold ?? 50);
+      setAlertEmailInput(userProfile.alertEmail || userProfile.email || '');
+      setWebhookUrlInput(userProfile.webhookAlertUrl || '');
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -80,6 +95,27 @@ export const ApiKeysManager: React.FC = () => {
   const creditsRemaining = userProfile?.creditsRemaining ?? 50;
   const creditsTotal = userProfile?.creditsTotalAllocated ?? 50;
   const percentUsed = Math.min(100, Math.max(0, Math.round(((creditsTotal - creditsRemaining) / creditsTotal) * 100)));
+  const dailyBurnRate = userProfile?.dailyBurnRate || Math.max(5, Math.round((userProfile?.totalExtractionsCount || 14) / 7));
+  const runwayDays = (creditsRemaining / Math.max(1, dailyBurnRate)).toFixed(1);
+
+  const handleSaveAlertPreferences = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    setIsSavingPrefs(true);
+    try {
+      await updateUserAlertPreferences(currentUser.uid, {
+        alertThreshold: Number(thresholdInput) || 50,
+        alertEmail: alertEmailInput.trim(),
+        webhookAlertUrl: webhookUrlInput.trim(),
+      });
+      setSavedPrefsSuccess(true);
+      setTimeout(() => setSavedPrefsSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to update alert preferences:', err);
+    } finally {
+      setIsSavingPrefs(false);
+    }
+  };
 
   return (
     <section id="keys" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -205,6 +241,125 @@ export const ApiKeysManager: React.FC = () => {
               </div>
             </div>
 
+          </div>
+        ) : null}
+
+        {/* Predictive Runway & Low-Balance Alert Preferences */}
+        {currentUser && userProfile ? (
+          <div className="bg-[#202734] border border-[#4a5568] rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#4a5568]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#dd6b20]/15 text-[#dd6b20] flex items-center justify-center border border-[#dd6b20]/30 shrink-0">
+                  <span className="material-symbols-outlined text-xl">notifications_active</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold font-display text-[#f7fafc]">
+                    Low-Balance Threshold & Predictive Runway Alerts
+                  </h3>
+                  <p className="text-xs text-[#a0aec0]">
+                    Prevent automated ingestion pipelines from stalling by configuring proactive balance alerts and webhooks.
+                  </p>
+                </div>
+              </div>
+
+              {/* Live Runway Pill */}
+              <div className="flex items-center gap-3 bg-[#1a202c] px-4 py-2 rounded-2xl border border-[#4a5568] self-start sm:self-auto shrink-0">
+                <span className="text-[10px] font-mono text-[#a0aec0] uppercase">Est. Pipeline Runway:</span>
+                <span className={`text-xs font-bold font-mono ${Number(runwayDays) <= 2.0 ? 'text-[#ff6b6b]' : 'text-[#38d9a9]'}`}>
+                  ⚡ {runwayDays} Days Remaining
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveAlertPreferences} className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* Threshold Field */}
+              <div>
+                <label className="block text-[11px] font-mono text-[#a0aec0] uppercase tracking-wider mb-1.5">
+                  Alert Trigger Threshold (Credits)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={1}
+                    max={5000}
+                    value={thresholdInput}
+                    onChange={(e) => setThresholdInput(Number(e.target.value))}
+                    className="w-full bg-[#1a202c] border border-[#4a5568] focus:border-[#dd6b20] focus:outline-none rounded-xl px-3.5 py-2.5 text-xs font-mono text-[#f7fafc] transition-colors"
+                  />
+                  <span className="absolute right-3 top-2.5 text-[11px] text-[#a0aec0] font-mono pointer-events-none">
+                    credits
+                  </span>
+                </div>
+                <span className="text-[10px] text-[#a0aec0] mt-1 block">
+                  Alerts will trigger when balance drops to or below this amount.
+                </span>
+              </div>
+
+              {/* Alert Email Field */}
+              <div>
+                <label className="block text-[11px] font-mono text-[#a0aec0] uppercase tracking-wider mb-1.5">
+                  Alert Notification Email
+                </label>
+                <input
+                  type="email"
+                  value={alertEmailInput}
+                  onChange={(e) => setAlertEmailInput(e.target.value)}
+                  placeholder="alerts@yourcompany.com"
+                  className="w-full bg-[#1a202c] border border-[#4a5568] focus:border-[#dd6b20] focus:outline-none rounded-xl px-3.5 py-2.5 text-xs text-[#f7fafc] transition-colors"
+                />
+                <span className="text-[10px] text-[#a0aec0] mt-1 block">
+                  Receives urgent runway warnings and 1-click top-up links.
+                </span>
+              </div>
+
+              {/* Webhook Alert URL */}
+              <div>
+                <label className="block text-[11px] font-mono text-[#a0aec0] uppercase tracking-wider mb-1.5">
+                  Alert Webhook URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={webhookUrlInput}
+                  onChange={(e) => setWebhookUrlInput(e.target.value)}
+                  placeholder="https://api.yourcompany.com/webhooks/low-balance"
+                  className="w-full bg-[#1a202c] border border-[#4a5568] focus:border-[#dd6b20] focus:outline-none rounded-xl px-3.5 py-2.5 text-xs font-mono text-[#f7fafc] transition-colors"
+                />
+                <span className="text-[10px] text-[#a0aec0] mt-1 block">
+                  Pings your backend with a <code className="text-[#dd6b20]">balance.low</code> event.
+                </span>
+              </div>
+
+              {/* Action Button */}
+              <div className="md:col-span-3 flex items-center justify-between pt-3 border-t border-[#4a5568] flex-wrap gap-3">
+                <div className="text-xs text-[#a0aec0] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#38d9a9] text-base">auto_mode</span>
+                  <span>7-Day Average Consumption: <strong>~{dailyBurnRate} credits/day</strong></span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {savedPrefsSuccess && (
+                    <span className="text-xs font-bold text-[#38d9a9] flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">check_circle</span>
+                      <span>Preferences Saved</span>
+                    </span>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={isSavingPrefs}
+                    className="px-5 py-2 rounded-xl bg-[#dd6b20] hover:bg-[#c05621] text-white font-bold text-xs font-mono uppercase transition-all shadow-md shadow-[#dd6b20]/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSavingPrefs ? (
+                      <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-sm">save</span>
+                        <span>Save Alert Settings</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         ) : (
           /* Logged-out Banner */

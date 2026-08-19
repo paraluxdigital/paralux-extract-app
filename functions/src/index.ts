@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use('/', extractionRouter);
 
-// Export Cloud Function
+// Export HTTPS Cloud Function for Extraction API
 export const extractionApi = onRequest(
   {
     cors: true,
@@ -30,3 +30,6 @@ export const extractionApi = onRequest(
   },
   app
 );
+
+// Export Event-Driven Background Trigger for Auto-Resuming Paused Queue Jobs
+export { onCreditTopupResumeQueue } from './triggers/queueTrigger.js';

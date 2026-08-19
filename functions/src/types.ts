@@ -16,6 +16,9 @@ export interface ExtractionRequest {
   userId?: string;
   apiKey?: string;
   extractionMode?: ExtractionModeType;
+  webhookUrl?: string;
+  queueIfInsufficient?: boolean;
+  jobId?: string;
 }
 
 export interface ExtractionResponse {
@@ -28,6 +31,7 @@ export interface ExtractionResponse {
   timestamp: number;
   data?: Record<string, any>;
   error?: string;
+  code?: string;
 }
 
 export interface AuthVerificationResult {
@@ -36,4 +40,50 @@ export interface AuthVerificationResult {
   keyName?: string;
   creditsRemaining: number;
   tier: string;
+}
+
+export type QueueJobStatus =
+  | 'queued'
+  | 'paused_insufficient_credits'
+  | 'processing'
+  | 'completed'
+  | 'failed';
+
+export interface QueueJob {
+  jobId: string;
+  userId: string;
+  apiKeyId?: string;
+  status: QueueJobStatus;
+  schema: Record<string, any>;
+  document?: DocumentInput;
+  storagePath?: string;
+  storageUrl?: string;
+  documentType: string;
+  extractionMode: ExtractionModeType;
+  creditsRequired: number;
+  webhookUrl?: string;
+  result?: Record<string, any>;
+  error?: string;
+  createdAt: number;
+  updatedAt: number;
+  expiresAt: number;
+}
+
+export type ErrorCode =
+  | 'INVALID_SCHEMA'
+  | 'MISSING_DOCUMENT'
+  | 'INVALID_API_KEY'
+  | 'INSUFFICIENT_CREDITS'
+  | 'DOCUMENT_UNPARSEABLE'
+  | 'RATE_LIMIT_EXCEEDED'
+  | 'INTERNAL_EXTRACTION_ERROR';
+
+export interface StructuredApiError {
+  status: 'error';
+  code: ErrorCode;
+  error: string;
+  creditsRequired?: number;
+  creditsAvailable?: number;
+  topupUrl?: string;
+  jobId?: string;
 }

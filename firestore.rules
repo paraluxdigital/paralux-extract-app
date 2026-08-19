@@ -20,5 +20,11 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow write: if false; // Written exclusively by Cloud Functions backend
     }
+
+    // Extraction Queue (Read only for the job owner)
+    match /extraction_queue/{jobId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if false; // Managed exclusively by Cloud Functions backend
+    }
   }
 }

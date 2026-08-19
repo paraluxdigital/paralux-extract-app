@@ -22,6 +22,11 @@ export const UserPortal: React.FC = () => {
 
   const creditsRemaining = userProfile?.creditsRemaining ?? 50;
   const creditsTotal = userProfile?.creditsTotalAllocated ?? 50;
+  const alertThreshold = userProfile?.alertThreshold || 50;
+  const dailyBurnRate = userProfile?.dailyBurnRate || Math.max(5, Math.round((userProfile?.totalExtractionsCount || 14) / 7));
+  const runwayDays = (creditsRemaining / Math.max(1, dailyBurnRate)).toFixed(1);
+  const isLowBalance = creditsRemaining <= alertThreshold;
+  const isLowRunway = Number(runwayDays) <= 2.0;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -221,12 +226,22 @@ export const UserPortal: React.FC = () => {
 
             <button
               onClick={() => setIsTopupModalOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-[#dd6b20] hover:bg-[#c05621] text-white font-bold text-[10px] uppercase font-mono transition-all flex items-center gap-1 cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-[#dd6b20] hover:bg-[#c05621] text-white font-bold text-[10px] uppercase font-mono transition-all flex items-center gap-1 cursor-pointer shadow-sm"
               title="Top up credits"
             >
               <span className="material-symbols-outlined text-xs">add</span>
               <span>Top Up</span>
             </button>
+
+            <div className="h-8 w-px bg-[#4a5568]"></div>
+
+            {/* Predictive Runway Stats Chip */}
+            <div className="flex flex-col">
+              <span className="text-[10px] font-mono text-[#a0aec0] uppercase">Est. Runway</span>
+              <span className={`text-xs font-bold font-mono ${isLowRunway ? 'text-[#ff6b6b]' : 'text-[#38d9a9]'}`}>
+                {runwayDays} Days <span className="text-[10px] text-[#a0aec0] font-normal">(~{dailyBurnRate}/day)</span>
+              </span>
+            </div>
 
             <div className="h-8 w-px bg-[#4a5568]"></div>
 
@@ -239,6 +254,33 @@ export const UserPortal: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Low Balance / Low Runway Warning Banner */}
+      {isLowBalance && (
+        <div className="bg-[#e03131]/15 border border-[#e03131]/40 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-[#e03131]/20 text-[#ff6b6b] shrink-0">
+              <span className="material-symbols-outlined text-xl">warning</span>
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-[#f7fafc]">
+                Low Credit Balance Alert ({creditsRemaining} Credits Remaining)
+              </h4>
+              <p className="text-[11px] text-[#a0aec0] mt-0.5">
+                Your remaining credit balance is at or below your alert threshold ({alertThreshold} credits). Automated ingestion pipelines may pause once depleted.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsTopupModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-[#dd6b20] hover:bg-[#c05621] text-white font-bold text-xs font-mono uppercase transition-all shrink-0 cursor-pointer shadow-md flex items-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-sm">bolt</span>
+            <span>Add Credits Now</span>
+          </button>
+        </div>
+      )}
 
       {/* Portal Tabs Bar (Synchronized with URL) */}
       <div className="flex items-center gap-2 bg-[#202734] p-1.5 rounded-2xl border border-[#4a5568] overflow-x-auto max-w-full shadow-inner">

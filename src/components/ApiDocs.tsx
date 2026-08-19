@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 export const ApiDocs: React.FC = () => {
   const [copied, setCopied] = useState(false);
+  const [activeResponseTab, setActiveResponseTab] = useState<'200' | '202' | '402'>('200');
 
   const sampleSuccessJson = JSON.stringify(
     {
@@ -29,10 +30,44 @@ export const ApiDocs: React.FC = () => {
     2
   );
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(sampleSuccessJson);
+  const sampleQueuedJson = JSON.stringify(
+    {
+      status: 'queued',
+      jobId: 'job_88a91c7x2',
+      jobStatus: 'paused_insufficient_credits',
+      message: 'Job registered and held in queue. Extraction will automatically process as soon as credits are added to your account.',
+      creditsRequired: 2,
+      creditsAvailable: 0,
+      pollUrl: '/api/jobs/job_88a91c7x2',
+      topupUrl: 'https://extract.paralux.digital/pricing'
+    },
+    null,
+    2
+  );
+
+  const sampleInsufficientCreditsJson = JSON.stringify(
+    {
+      status: 'error',
+      code: 'INSUFFICIENT_CREDITS',
+      error: 'Insufficient credit balance. This extraction requires 2 credits, but your account has 0.',
+      creditsRequired: 2,
+      creditsAvailable: 0,
+      topupUrl: 'https://extract.paralux.digital/pricing'
+    },
+    null,
+    2
+  );
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const getActiveResponseCode = () => {
+    if (activeResponseTab === '200') return sampleSuccessJson;
+    if (activeResponseTab === '202') return sampleQueuedJson;
+    return sampleInsufficientCreditsJson;
   };
 
   return (
@@ -90,7 +125,7 @@ export const ApiDocs: React.FC = () => {
 
             <div className="flex flex-col gap-3">
               <span className="text-xs font-bold text-[#a0aec0] uppercase tracking-wider font-mono">
-                JSON Body Payload
+                JSON Body Payload Parameters
               </span>
               
               <div className="bg-[#202734] p-4 rounded-xl border border-[#4a5568] flex flex-col gap-3.5 text-xs shadow-inner">
@@ -126,28 +161,82 @@ export const ApiDocs: React.FC = () => {
                     <code>1</code> = <strong>Standard Extraction</strong> (1 Credit / 5 pages), <code>2</code> = <strong>Advanced Multimodal</strong> (2 Credits / 5 pages for complex tables and dense contracts).
                   </p>
                 </div>
+
+                <div className="pt-3 border-t border-[#4a5568]">
+                  <div className="flex items-center gap-2">
+                    <strong className="text-[#dd6b20] font-mono text-xs">webhookUrl</strong>
+                    <span className="text-[10px] font-bold text-[#a0aec0] uppercase font-mono">optional</span>
+                    <span className="text-[10px] text-[#a0aec0] font-mono">string (URL)</span>
+                  </div>
+                  <p className="text-[#a0aec0] mt-1 leading-relaxed">
+                    Webhook endpoint URL. When supplied, extraction payloads are dispatched via HTTP POST asynchronously.
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-[#4a5568]">
+                  <div className="flex items-center gap-2">
+                    <strong className="text-[#dd6b20] font-mono text-xs">queueIfInsufficient</strong>
+                    <span className="text-[10px] font-bold text-[#a0aec0] uppercase font-mono">optional</span>
+                    <span className="text-[10px] text-[#a0aec0] font-mono">boolean</span>
+                  </div>
+                  <p className="text-[#a0aec0] mt-1 leading-relaxed">
+                    If <code>true</code>, requests with zero credits are held in the 24h queue (HTTP 202) and will auto-resume as soon as credits are added.
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Storage Lifecycle Notice */}
-            <div className="bg-[#202734] p-4 rounded-xl border border-[#2f9e44]/40 flex items-center gap-3">
-              <span className="material-symbols-outlined text-[#2f9e44] text-xl shrink-0">verified_user</span>
-              <div className="text-xs text-[#a0aec0]">
-                <strong className="text-[#f7fafc]">24-Hour Ephemeral Retention:</strong> Uploaded documents in <code>ephemeral/</code> auto-expire and are permanently deleted after 24 hours via GCS lifecycle rules. Zero storage costs billed.
+            {/* Reliability & Zero Charge Guarantees */}
+            <div className="bg-[#202734] p-4 rounded-xl border border-[#2f9e44]/40 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#2f9e44]">
+                <span className="material-symbols-outlined text-base">verified_user</span>
+                <span>Zero-Charge on Failure & Ephemeral Privacy</span>
               </div>
+              <p className="text-[11px] text-[#a0aec0] leading-relaxed">
+                Credits are only permanently deducted after successful schema validation. If extraction fails, 0 credits are billed. Uploaded documents auto-purge after 24 hours.
+              </p>
             </div>
           </div>
 
-          {/* Success Response Preview */}
+          {/* Response Inspector */}
           <div className="lg:col-span-6 flex flex-col gap-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#f7fafc] uppercase tracking-wider flex items-center gap-2 font-display">
-                <span className="material-symbols-outlined text-[#2f9e44] text-base">task_alt</span>
-                Success Response (HTTP 200 OK)
-              </h3>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              {/* Response Code Tabs */}
+              <div className="flex items-center gap-1 bg-[#202734] p-1 rounded-xl border border-[#4a5568]">
+                <button
+                  onClick={() => setActiveResponseTab('200')}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    activeResponseTab === '200'
+                      ? 'bg-[#2f9e44] text-white shadow'
+                      : 'text-[#a0aec0] hover:text-[#f7fafc]'
+                  }`}
+                >
+                  200 OK
+                </button>
+                <button
+                  onClick={() => setActiveResponseTab('202')}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    activeResponseTab === '202'
+                      ? 'bg-[#dd6b20] text-white shadow'
+                      : 'text-[#a0aec0] hover:text-[#f7fafc]'
+                  }`}
+                >
+                  202 Queued
+                </button>
+                <button
+                  onClick={() => setActiveResponseTab('402')}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    activeResponseTab === '402'
+                      ? 'bg-[#e53e3e] text-white shadow'
+                      : 'text-[#a0aec0] hover:text-[#f7fafc]'
+                  }`}
+                >
+                  402 Error
+                </button>
+              </div>
 
               <button
-                onClick={handleCopy}
+                onClick={() => handleCopy(getActiveResponseCode())}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#202734] border border-[#4a5568] text-[11px] font-medium text-[#a0aec0] hover:text-white transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-xs text-[#dd6b20]">
@@ -157,10 +246,29 @@ export const ApiDocs: React.FC = () => {
               </button>
             </div>
 
-            <div className="bg-[#1a202c] p-4 rounded-xl border border-[#4a5568] overflow-x-auto shadow-inner max-h-[440px]">
-              <pre className="text-xs text-[#2f9e44] font-mono leading-relaxed m-0">
-                <code>{sampleSuccessJson}</code>
+            <div className="bg-[#1a202c] p-4 rounded-xl border border-[#4a5568] overflow-x-auto shadow-inner max-h-[460px]">
+              <pre className={`text-xs font-mono leading-relaxed m-0 ${
+                activeResponseTab === '200' ? 'text-[#2f9e44]' : activeResponseTab === '202' ? 'text-[#dd6b20]' : 'text-[#ff6b6b]'
+              }`}>
+                <code>{getActiveResponseCode()}</code>
               </pre>
+            </div>
+
+            {/* Error Codes Reference Table */}
+            <div className="bg-[#202734] p-4 rounded-xl border border-[#4a5568] flex flex-col gap-2">
+              <span className="text-[11px] font-mono font-bold text-[#a0aec0] uppercase tracking-wider">
+                Standard Error Codes:
+              </span>
+              <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                <div className="text-[#ff6b6b]">INVALID_SCHEMA (400)</div>
+                <div className="text-[#a0aec0]">Malformed schema object</div>
+                <div className="text-[#ff6b6b]">INVALID_API_KEY (401)</div>
+                <div className="text-[#a0aec0]">Missing/revoked secret key</div>
+                <div className="text-[#ff6b6b]">INSUFFICIENT_CREDITS (402)</div>
+                <div className="text-[#a0aec0]">Balance exhausted</div>
+                <div className="text-[#ff6b6b]">RATE_LIMIT_EXCEEDED (429)</div>
+                <div className="text-[#a0aec0]">Exceeded tier rate limit</div>
+              </div>
             </div>
           </div>
 
