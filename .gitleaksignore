@@ -1,0 +1,15 @@
+# Gitleaks ignore list for legacy historical commits and sample snippets
+# Format: <commit-hash>:<file-path>:<rule-id>:<line-number>
+
+# Legacy Firebase public Web API key fallbacks in historical commits
+86bfd7350cadb3d34256fc3a627fd2d4589081b2:.github/workflows/ci.yml:gcp-api-key:36
+86bfd7350cadb3d34256fc3a627fd2d4589081b2:.github/workflows/ci.yml:gcp-api-key:67
+86bfd7350cadb3d34256fc3a627fd2d4589081b2:.github/workflows/ci.yml:gcp-api-key:106
+59b0a5d0bfb010cb50321dc5404ff2b05ae95683:src/services/firebase.ts:gcp-api-key:30
+
+# Legacy sample placeholder keys in CodeExporter snippets (baba613)
+baba6137c96fc654c37693c36c1153a812e150f9:src/components/CodeExporter.tsx:generic-api-key:9
+baba6137c96fc654c37693c36c1153a812e150f9:src/components/CodeExporter.tsx:generic-api-key:36
+baba6137c96fc654c37693c36c1153a812e150f9:src/components/CodeExporter.tsx:generic-api-key:62
+baba6137c96fc654c37693c36c1153a812e150f9:src/components/CodeExporter.tsx:generic-api-key:101
+baba6137c96fc654c37693c36c1153a812e150f9:src/components/CodeExporter.tsx:curl-auth-header:4
