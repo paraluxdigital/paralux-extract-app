@@ -30,7 +30,7 @@ jobs:
           rm gitleaks gitleaks.tar.gz
 
       - name: Run Gitleaks Detect
-        run: gitleaks detect --verbose --redact --gitleaks-ignore-path=.gitleaksignore
+        run: gitleaks detect --verbose --redact --config=.gitleaks.toml --gitleaks-ignore-path=.gitleaksignore
 
   dependency-audit:
     name: Dependency Vulnerability Audit

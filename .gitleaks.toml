@@ -1,0 +1,13 @@
+# Gitleaks configuration file for Paralux Extract
+
+[allowlist]
+description = "Allowlist for sample code snippets and public client configuration"
+paths = [
+  '''src/components/CodeExporter\.tsx''',
+  '''\.env\.example$''',
+  '''functions/\.env\.example$'''
+]
+regexes = [
+  '''px_live_[a-zA-Z0-9_-]{24,}''',
+  '''px_test_[a-zA-Z0-9_-]{24,}'''
+]
