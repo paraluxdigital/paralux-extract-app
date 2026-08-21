@@ -32,13 +32,6 @@ jobs:
 
       - name: Build frontend production bundle
         run: npm run build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyAjzfG07rUtI8W54jq68w_NFv_p6wccYis' }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'paralux-extract.firebaseapp.com' }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'paralux-extract' }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET || 'paralux-extract.firebasestorage.app' }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || '897687440263' }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID || '1:897687440263:web:0d0a0d455407e777a16122' }}
 
       - name: Install & Build Cloud Functions
         run: |
@@ -46,10 +39,10 @@ jobs:
           npm ci
           npm run build
 
-  deploy-live:
-    name: Deploy to Firebase Hosting (Live)
+  deploy-staging:
+    name: Deploy to Staging (Firebase Hosting)
     needs: verify
-    if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'staging')
+    if: github.event_name == 'push' && github.ref_name == 'staging'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -67,32 +60,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build production bundle
+      - name: Build bundle
         run: npm run build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyAjzfG07rUtI8W54jq68w_NFv_p6wccYis' }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'paralux-extract.firebaseapp.com' }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'paralux-extract' }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET || 'paralux-extract.firebasestorage.app' }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || '897687440263' }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID || '1:897687440263:web:0d0a0d455407e777a16122' }}
 
-      - name: Deploy to Firebase Hosting (Live Channel)
+      - name: Deploy to Firebase Hosting (Staging Site)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PARALUX_EXTRACT || secrets.FIREBASE_SERVICE_ACCOUNT || secrets.FIREBASE_SERVICE_ACCOUNT_PARALUX_DIGITAL }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PARALUX_EXTRACT || secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: paralux-extract
+          target: staging
           channelId: live
 
-  deploy-preview:
-    name: Deploy PR Preview Channel
+  deploy-prod:
+    name: Deploy to Production (Firebase Hosting)
     needs: verify
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'push' && github.ref_name == 'main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -106,19 +93,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build production bundle
+      - name: Build bundle
         run: npm run build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyAjzfG07rUtI8W54jq68w_NFv_p6wccYis' }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'paralux-extract.firebaseapp.com' }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'paralux-extract' }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET || 'paralux-extract.firebasestorage.app' }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || '897687440263' }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID || '1:897687440263:web:0d0a0d455407e777a16122' }}
 
-      - name: Deploy to Firebase Hosting (Preview Channel)
+      - name: Deploy to Firebase Hosting (Production Live)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PARALUX_EXTRACT || secrets.FIREBASE_SERVICE_ACCOUNT || secrets.FIREBASE_SERVICE_ACCOUNT_PARALUX_DIGITAL }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PARALUX_EXTRACT || secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: paralux-extract
+          target: prod
+          channelId: live

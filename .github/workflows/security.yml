@@ -1,0 +1,47 @@
+name: Security & Secret Scan
+
+on:
+  push: # Runs on pushes to ANY branch to detect leaked secrets immediately
+  pull_request: # Runs on all pull requests
+  schedule:
+    - cron: '0 6 * * 1' # Weekly scan every Monday at 06:00 UTC
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full git history is required to inspect all commits
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-audit:
+    name: Dependency Vulnerability Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+
+      - name: Audit backend functions dependencies
+        run: |
+          cd functions
+          npm audit --audit-level=high
