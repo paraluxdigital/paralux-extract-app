@@ -9,7 +9,7 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api/extract': {
-        target: 'http://127.0.0.1:5001/paralux-digital/us-central1/extractionApi',
+        target: 'http://127.0.0.1:5001/paralux-extract/us-central1/extractionApi',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/extract/, '/extract'),
       },

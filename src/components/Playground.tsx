@@ -182,36 +182,42 @@ export const Playground: React.FC = () => {
         const fieldKey = field.key.trim();
 
         if (field.type === 'array') {
-          const itemsType = field.itemsType || 'string';
-          if (itemsType === 'object') {
+          const hasProps = Array.isArray(field.itemProperties) && field.itemProperties.length > 0;
+          const itemsType = field.itemsType || (hasProps ? 'object' : 'string');
+
+          if (itemsType === 'object' || hasProps) {
             const subProps: Record<string, any> = {};
+            const subRequired: string[] = [];
             (field.itemProperties || []).forEach((prop) => {
               if (prop.key && prop.key.trim()) {
-                subProps[prop.key.trim()] = {
+                const pk = prop.key.trim();
+                subProps[pk] = {
                   type: prop.type || 'string',
                   description: prop.description || '',
                 };
+                subRequired.push(pk);
               }
             });
             obj[fieldKey] = {
               type: 'array',
-              description: field.description,
+              description: field.description || '',
               items: {
                 type: 'object',
                 properties: subProps,
+                required: subRequired,
               },
             };
           } else {
             obj[fieldKey] = {
               type: 'array',
-              description: field.description,
+              description: field.description || '',
               items: itemsType,
             };
           }
         } else {
           obj[fieldKey] = {
             type: field.type,
-            description: field.description,
+            description: field.description || '',
           };
         }
       });
@@ -281,7 +287,16 @@ export const Playground: React.FC = () => {
   const updateField = (index: number, key: keyof SchemaField, value: any) => {
     setVisualFields((prev) => {
       const copy = [...prev];
-      copy[index] = { ...copy[index], [key]: value };
+      const updated = { ...copy[index], [key]: value };
+      if (key === 'type' && value === 'array') {
+        updated.itemsType = 'object';
+        if (!updated.itemProperties || updated.itemProperties.length === 0) {
+          updated.itemProperties = [
+            { key: 'item_1', type: 'string', description: '' }
+          ];
+        }
+      }
+      copy[index] = updated;
       return copy;
     });
   };
@@ -289,8 +304,9 @@ export const Playground: React.FC = () => {
   const addArrayItemProperty = (fieldIndex: number) => {
     setVisualFields((prev) => {
       const copy = [...prev];
-      const field = copy[fieldIndex];
-      const existingProps = field.itemProperties || [];
+      const field = { ...copy[fieldIndex] };
+      const existingProps = field.itemProperties ? [...field.itemProperties] : [];
+      field.itemsType = 'object';
       field.itemProperties = [
         ...existingProps,
         {
@@ -299,6 +315,7 @@ export const Playground: React.FC = () => {
           description: '',
         },
       ];
+      copy[fieldIndex] = field;
       return copy;
     });
   };
@@ -306,10 +323,11 @@ export const Playground: React.FC = () => {
   const removeArrayItemProperty = (fieldIndex: number, propIndex: number) => {
     setVisualFields((prev) => {
       const copy = [...prev];
-      const field = copy[fieldIndex];
+      const field = { ...copy[fieldIndex] };
       if (field.itemProperties) {
         field.itemProperties = field.itemProperties.filter((_, idx) => idx !== propIndex);
       }
+      copy[fieldIndex] = field;
       return copy;
     });
   };
@@ -322,12 +340,13 @@ export const Playground: React.FC = () => {
   ) => {
     setVisualFields((prev) => {
       const copy = [...prev];
-      const field = copy[fieldIdx];
+      const field = { ...copy[fieldIdx] };
       if (field.itemProperties) {
         const props = [...field.itemProperties];
         props[propIdx] = { ...props[propIdx], [key]: val };
         field.itemProperties = props;
       }
+      copy[fieldIdx] = field;
       return copy;
     });
   };
@@ -446,55 +465,10 @@ export const Playground: React.FC = () => {
       showToast(`Extracted successfully (${creditsCost} ${creditsCost === 1 ? 'Credit' : 'Credits'} used)`);
     } catch (err: any) {
       console.error('Extraction error:', err);
-      // Offline/simulation preview fallback
-      const mockResult: ExtractionApiResponse = {
-        status: 'success',
-        extractionId: 'px_' + Math.random().toString(36).substring(2, 9),
-        extractionMode: extractionMode,
-        creditsUsed: creditsCost,
-        creditsRemaining: Math.max(0, userBalance - creditsCost),
-        executionTimeMs: extractionMode === 1 ? 520 : 1080,
-        timestamp: Date.now(),
-        data: documentType === 'receipt' ? {
-          storeName: 'San Juan Roasters #104',
-          transactionDate: '2026-08-14 09:30 AM',
-          paymentMethod: 'Apple Pay (Visa ****4921)',
-          total: 30.11,
-          tax: 3.11,
-          items: [
-            { name: '2x Iced Vanilla Latte ($6.50 ea)', price: 13.0 },
-            { name: '1x Almond Croissant', price: 4.75 },
-            { name: '1x Avocado Toast', price: 9.25 }
-          ]
-        } : documentType === 'resume' ? {
-          candidateName: 'Alexander Rivera',
-          email: 'alex.rivera@example.com',
-          phone: '(787) 555-0199',
-          yearsExperience: 8,
-          skills: ['React', 'TypeScript', 'Next.js', 'Node.js', 'Python', 'Google Cloud', 'Docker', 'Cloud Systems']
-        } : documentType === 'contract' ? {
-          propertyAddress: '1420 Ponce de Leon Ave, Apt 4B, San Juan, PR 00907',
-          landlord: 'Caribbean Realty Holdings LLC',
-          tenant: 'Sofia Maria Rodriguez',
-          monthlyRent: 2400.0,
-          securityDeposit: 2400.0,
-          leaseTerm: '12 Months'
-        } : {
-          invoiceNumber: 'INV-2026-889',
-          date: '2026-07-22',
-          clientName: 'Acme Software Inc.',
-          totalAmount: 11000.0,
-          taxAmount: 1000.0,
-          lineItems: [
-            { description: 'Web Application Development (50 hrs @ $120/hr)', amount: 6000.0 },
-            { description: 'Cloud Architecture & Security Audit (1 unit)', amount: 1500.0 },
-            { description: 'Document Extraction Pipeline Integration', amount: 2500.0 }
-          ]
-        }
-      };
-
-      setExtractionResult(mockResult);
-      showToast(`Extraction completed (${creditsCost} ${creditsCost === 1 ? 'Credit' : 'Credits'})`);
+      const errorMessage = err?.message || 'Failed to extract document. Check backend service status and API configuration.';
+      setExtractionError(errorMessage);
+      setExtractionResult(null);
+      showToast(`Extraction error: ${errorMessage}`);
     } finally {
       setIsExtracting(false);
       setUploadProgress(null);
@@ -631,7 +605,10 @@ export const Playground: React.FC = () => {
                     Visual Builder
                   </button>
                   <button
-                    onClick={() => setSchemaMode('json')}
+                    onClick={() => {
+                      setRawJsonSchema(JSON.stringify(currentSchemaObject, null, 2));
+                      setSchemaMode('json');
+                    }}
                     className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
                       schemaMode === 'json' ? 'bg-[#dd6b20] text-white' : 'text-[#a0aec0] hover:text-white'
                     }`}

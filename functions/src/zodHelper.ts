@@ -2,18 +2,14 @@ import { z } from 'zod';
 
 /**
  * Converts a dynamic schema object from request payload into a validated ZodObject schema.
- * Supports:
- * 1. JSON Schema format ({ type: "object", properties: { ... }, required: [...] })
- * 2. Property dictionary ({ name: { type: "string", description: "..." } })
- * 3. Simple key-type map ({ name: "string", age: "number", tags: "string[]" })
  */
 export function buildZodSchema(rawSchema: any): z.ZodObject<any> {
   if (!rawSchema || typeof rawSchema !== 'object') {
     throw new Error('Schema must be a valid non-null object');
   }
 
-  // If top level is JSON Schema wrapper with properties
-  const properties = rawSchema.properties || (rawSchema.type === 'object' && rawSchema.fields) || rawSchema;
+  const isWrapped = rawSchema.type === 'object' && rawSchema.properties;
+  const properties = isWrapped ? rawSchema.properties : (rawSchema.properties || rawSchema.fields || rawSchema);
 
   if (typeof properties !== 'object' || Object.keys(properties).length === 0) {
     throw new Error('Schema object must contain at least one field property definition.');
@@ -23,10 +19,7 @@ export function buildZodSchema(rawSchema: any): z.ZodObject<any> {
   const shape: Record<string, z.ZodTypeAny> = {};
 
   for (const [key, value] of Object.entries(properties)) {
-    // Skip internal JSON Schema keywords if top level was passed as property map directly
-    if (key === 'type' && typeof value === 'string' && rawSchema.properties) continue;
-    if (key === '$schema' || key === 'required' || key === 'title' || key === 'description') continue;
-
+    if (!isWrapped && (key === '$schema' || (key === 'type' && value === 'object'))) continue;
     shape[key] = convertFieldToZod(value, requiredList.includes(key));
   }
 
@@ -57,10 +50,10 @@ function convertFieldToZod(fieldDef: any, isRequired: boolean = false): z.ZodTyp
     } else if (type === 'array') {
       const itemsDef = fieldDef.items || 'string';
       schema = z.array(convertFieldToZod(itemsDef, true));
-    } else if (type === 'object' || fieldDef.properties) {
+    } else if (type === 'object' || fieldDef.properties || fieldDef.fields) {
       const subProps = fieldDef.properties || fieldDef.fields || {};
       const subShape: Record<string, z.ZodTypeAny> = {};
-      const subRequired: string[] = Array.isArray(fieldDef.required) ? fieldDef.required : [];
+      const subRequired: string[] = Array.isArray(fieldDef.required) ? fieldDef.required : Object.keys(subProps);
 
       for (const [k, v] of Object.entries(subProps)) {
         subShape[k] = convertFieldToZod(v, subRequired.includes(k));
@@ -101,4 +94,88 @@ function primitiveStringToZod(typeStr: string): z.ZodTypeAny {
     default:
       return z.string();
   }
+}
+
+/**
+ * Normalizes input schema into standard JSON Schema object for Gemini responseSchema.
+ */
+export function normalizeJsonSchema(rawSchema: any): Record<string, any> {
+  if (!rawSchema || typeof rawSchema !== 'object') {
+    throw new Error('Schema must be a valid non-null object');
+  }
+
+  const isWrapped = rawSchema.type === 'object' && rawSchema.properties;
+  const rawProps = isWrapped ? rawSchema.properties : (rawSchema.properties || rawSchema.fields || rawSchema);
+
+  const properties: Record<string, any> = {};
+  const required: string[] = Array.isArray(rawSchema.required) ? [...rawSchema.required] : [];
+
+  for (const [key, value] of Object.entries(rawProps)) {
+    if (!isWrapped && (key === '$schema' || (key === 'type' && value === 'object'))) continue;
+    properties[key] = normalizeFieldDef(value);
+    if (!rawSchema.required && !required.includes(key)) {
+      required.push(key);
+    }
+  }
+
+  return {
+    type: 'OBJECT',
+    properties,
+    required: required.length > 0 ? required : Object.keys(properties),
+  };
+}
+
+function normalizeFieldDef(fieldDef: any): Record<string, any> {
+  if (typeof fieldDef === 'string') {
+    const t = fieldDef.toLowerCase().trim();
+    if (t.endsWith('[]')) {
+      return { type: 'ARRAY', items: normalizeFieldDef(t.slice(0, -2)) };
+    }
+    return { type: t === 'number' || t === 'integer' || t === 'float' ? 'NUMBER' : t === 'boolean' || t === 'bool' ? 'BOOLEAN' : 'STRING' };
+  }
+
+  if (typeof fieldDef === 'object' && fieldDef !== null) {
+    const rawType = (fieldDef.type || (fieldDef.properties ? 'OBJECT' : 'STRING')).toUpperCase();
+    const type = rawType === 'INTEGER' || rawType === 'FLOAT' ? 'NUMBER' : rawType === 'BOOL' ? 'BOOLEAN' : rawType;
+    const out: Record<string, any> = { type };
+
+    if (fieldDef.description) {
+      out.description = fieldDef.description;
+    }
+
+    if (type === 'ARRAY') {
+      if (fieldDef.items) {
+        out.items = normalizeFieldDef(fieldDef.items);
+      } else {
+        out.items = { type: 'STRING' };
+      }
+    }
+
+    if (type === 'OBJECT' || fieldDef.properties || fieldDef.fields) {
+      out.type = 'OBJECT';
+      const propsSource = fieldDef.properties || fieldDef.fields || {};
+      const subProps: Record<string, any> = {};
+      const subRequired: string[] = Array.isArray(fieldDef.required) ? [...fieldDef.required] : [];
+
+      for (const [k, v] of Object.entries(propsSource)) {
+        subProps[k] = normalizeFieldDef(v);
+        if (!fieldDef.required && !subRequired.includes(k)) {
+          subRequired.push(k);
+        }
+      }
+
+      out.properties = subProps;
+      if (subRequired.length > 0) {
+        out.required = subRequired;
+      }
+    }
+
+    if (Array.isArray(fieldDef.enum)) {
+      out.enum = fieldDef.enum;
+    }
+
+    return out;
+  }
+
+  return { type: 'STRING' };
 }

@@ -20,6 +20,7 @@ export async function extractDocument(payload: {
     storagePath: payload.storagePath,
     storageUrl: payload.storageUrl,
     documentType: payload.documentType,
+    userId: payload.userId,
     extractionMode: payload.extractionMode || 1,
   });
 

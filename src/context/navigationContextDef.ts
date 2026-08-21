@@ -1,7 +1,7 @@
 import { createContext } from 'react';
 
 export type ViewMode = 'landing' | 'portal';
-export type PortalTab = 'workbench' | 'keys' | 'docs' | 'snippets';
+export type PortalTab = 'workbench' | 'keys' | 'logs' | 'docs' | 'snippets';
 
 export interface NavigationContextType {
   currentView: ViewMode;

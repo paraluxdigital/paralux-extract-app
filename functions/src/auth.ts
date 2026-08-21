@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { db } from './index.js';
 import { FieldValue } from 'firebase-admin/firestore';
-import type { AuthVerificationResult } from './types.js';
+import type { AuthVerificationResult, TokenUsageMetrics, UsageLogRecord } from './types.js';
 
 export function hashApiKey(key: string): string {
   return crypto.createHash('sha256').update(key.trim()).digest('hex');
@@ -74,6 +74,7 @@ export async function verifyAuthAndReserveQuota(
       creditsTotalAllocated: 50,
       totalExtractionsCount: 0,
       monthlyExtractionsCount: 0,
+      totalTokensConsumed: 0,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -114,7 +115,7 @@ export async function verifyAuthAndReserveQuota(
 }
 
 /**
- * Phase 2: Commits the credit deduction AFTER successful extraction.
+ * Phase 2: Commits the credit deduction AFTER successful extraction and records complete token telemetry.
  * Guarantees Zero-Charge on Failure.
  */
 export async function commitCreditDeduction(
@@ -123,50 +124,79 @@ export async function commitCreditDeduction(
   extractionId: string,
   documentType: string = 'general',
   extractionMode: number = 1,
-  apiKeyId?: string
+  apiKeyId?: string,
+  tokenUsage?: TokenUsageMetrics,
+  executionTimeMs?: number,
+  modelName?: string
 ): Promise<number> {
-  if (userId === 'anonymous' || userId === 'web_sandbox_user') {
-    return Math.max(0, 50 - creditsCost);
+  const isSandboxUser = userId === 'anonymous' || userId === 'web_sandbox_user';
+  let updatedBalance = 50;
+
+  if (!isSandboxUser) {
+    const userRef = db.collection('users').doc(userId);
+
+    updatedBalance = await db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) return 0;
+
+      const userData = userDoc.data() || {};
+      const currentCredits = typeof userData.creditsRemaining === 'number' ? userData.creditsRemaining : 50;
+      const newBalance = Math.max(0, currentCredits - creditsCost);
+
+      const updates: Record<string, any> = {
+        creditsRemaining: newBalance,
+        totalExtractionsCount: FieldValue.increment(1),
+        monthlyExtractionsCount: FieldValue.increment(1),
+        updatedAt: Date.now(),
+      };
+
+      if (tokenUsage) {
+        updates.totalTokensConsumed = FieldValue.increment(tokenUsage.totalTokens || 0);
+        updates.promptTokensTotal = FieldValue.increment(tokenUsage.promptTokens || 0);
+        updates.candidatesTokensTotal = FieldValue.increment(tokenUsage.candidatesTokens || 0);
+      }
+
+      transaction.update(userRef, updates);
+
+      return newBalance;
+    });
+  } else {
+    updatedBalance = Math.max(0, 50 - creditsCost);
   }
 
-  const userRef = db.collection('users').doc(userId);
-
-  const updatedBalance = await db.runTransaction(async (transaction) => {
-    const userDoc = await transaction.get(userRef);
-    if (!userDoc.exists) return 0;
-
-    const userData = userDoc.data() || {};
-    const currentCredits = typeof userData.creditsRemaining === 'number' ? userData.creditsRemaining : 50;
-    const newBalance = Math.max(0, currentCredits - creditsCost);
-
-    transaction.update(userRef, {
-      creditsRemaining: newBalance,
-      totalExtractionsCount: FieldValue.increment(1),
-      monthlyExtractionsCount: FieldValue.increment(1),
-      updatedAt: Date.now(),
-    });
-
-    return newBalance;
-  });
-
-  // Write usage log
+  // Write comprehensive telemetry to /usage_logs
   if (extractionId) {
-    db.collection('usage_logs').doc(extractionId).set({
+    const logRecord: UsageLogRecord = {
       extractionId,
       userId,
       apiKeyId: apiKeyId || null,
       documentType,
-      extractionMode,
+      extractionMode: extractionMode === 2 ? 2 : 1,
+      model: modelName || `mode-${extractionMode}`,
+      promptTokens: tokenUsage?.promptTokens || 0,
+      candidatesTokens: tokenUsage?.candidatesTokens || 0,
+      totalTokens: tokenUsage?.totalTokens || 0,
+      thoughtsTokens: tokenUsage?.thoughtsTokens || 0,
+      cachedContentTokens: tokenUsage?.cachedContentTokens || 0,
       creditsDeducted: creditsCost,
+      executionTimeMs: executionTimeMs || 0,
       timestamp: Date.now(),
       status: 'success',
-    }).catch(e => console.warn('Failed to record usage log:', e));
+    };
+
+    try {
+      await db.collection('usage_logs').doc(extractionId).set(logRecord);
+      console.log(`[TELEMETRY] Successfully saved usage log ${extractionId} for user ${userId} (${logRecord.totalTokens} tokens).`);
+    } catch (e) {
+      console.error(`[TELEMETRY ERROR] Failed to save usage log ${extractionId}:`, e);
+    }
   }
 
-  // Check low balance alert trigger
-  checkAndTriggerLowBalanceAlert(userId, updatedBalance).catch(e =>
-    console.warn('Low balance alert check error:', e)
-  );
+  if (!isSandboxUser) {
+    checkAndTriggerLowBalanceAlert(userId, updatedBalance).catch(e =>
+      console.warn('Low balance alert check error:', e)
+    );
+  }
 
   return updatedBalance;
 }

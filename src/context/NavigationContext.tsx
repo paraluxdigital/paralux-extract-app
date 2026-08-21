@@ -13,6 +13,7 @@ const PAGE_TITLES: Record<string, string> = {
   'landing-snippets': 'SDK Code Snippets | Paralux Extract AI',
   'portal-workbench': 'Schema Workbench | Paralux Extract AI',
   'portal-keys': 'API Keys & Limits | Paralux Extract AI',
+  'portal-logs': 'Extraction Logs & Token Metrics | Paralux Extract AI',
   'portal-docs': 'REST API Documentation | Paralux Extract AI',
   'portal-snippets': 'SDK Code Snippets | Paralux Extract AI',
 };
@@ -29,6 +30,7 @@ function parseUrlState(): { view: ViewMode; tab: PortalTab; section: string | nu
     const subPath = pathname.replace(/^\/portal\/?/, '');
     let tab: PortalTab = 'workbench';
     if (subPath === 'keys' || subPath === 'api-keys') tab = 'keys';
+    else if (subPath === 'logs' || subPath === 'history' || subPath === 'metrics') tab = 'logs';
     else if (subPath === 'docs' || subPath === 'api') tab = 'docs';
     else if (subPath === 'snippets' || subPath === 'sdk') tab = 'snippets';
     else if (subPath === 'workbench' || subPath === 'playground') tab = 'workbench';

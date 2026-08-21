@@ -1,17 +1,14 @@
 import 'dotenv/config';
-import { InMemorySessionService, Runner, LlmAgent } from '@google/adk';
+import { GoogleGenAI } from '@google/genai';
 import { getStorage } from 'firebase-admin/storage';
-import { buildZodSchema } from './zodHelper.js';
+import { buildZodSchema, normalizeJsonSchema } from './zodHelper.js';
 import { verifyAuthAndReserveQuota, commitCreditDeduction } from './auth.js';
 import type { ExtractionRequest, ExtractionResponse, DocumentInput } from './types.js';
 
-const sessionService = new InMemorySessionService();
-const appName = 'paralux-extract-app';
-
-// Mode mappings to high-speed vision models
+// Mode mappings: Mode 1 = Cheap/High-Speed, Mode 2 = Advanced Multimodal
 const MODE_MODELS: Record<number, string> = {
-  1: 'gemini-2.5-flash',
-  2: 'gemini-2.5-flash',
+  1: process.env.GEMINI_MODE_1_MODEL || 'gemini-3.5-flash-lite',
+  2: process.env.GEMINI_MODE_2_MODEL || 'gemini-3.7-flash',
 };
 
 interface ResolvedDocument {
@@ -52,7 +49,8 @@ async function resolveDocumentContent(
 ): Promise<ResolvedDocument> {
   // 1. Direct Cloud Storage download
   if (storagePath) {
-    const bucket = getStorage().bucket();
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'paralux-extract.firebasestorage.app';
+    const bucket = getStorage().bucket(bucketName);
     const file = bucket.file(storagePath);
     const [exists] = await file.exists();
 
@@ -161,43 +159,88 @@ async function resolveDocumentContent(
   };
 }
 
+interface InferenceExecutionResult {
+  text: string;
+  model: string;
+  usage: {
+    promptTokens: number;
+    candidatesTokens: number;
+    totalTokens: number;
+    thoughtsTokens?: number;
+    cachedContentTokens?: number;
+  };
+}
+
 /**
- * Runs agent extraction with internal retry for transient provider errors.
+ * Runs structured extraction via Gemini API with retry mechanism and token metrics tracking.
  */
 async function executeInferenceWithRetry(
-  agent: LlmAgent,
-  userId: string,
+  modelName: string,
   parts: any[],
+  schema: any,
   maxRetries: number = 2
-): Promise<string> {
+): Promise<InferenceExecutionResult> {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+  if (!apiKey) {
+    const err: any = new Error('GEMINI_API_KEY is not configured on the backend.');
+    err.statusCode = 500;
+    err.code = 'CONFIG_ERROR';
+    throw err;
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  const normalizedSchema = normalizeJsonSchema(schema);
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const sessionId = `extract-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-      await sessionService.createSession({ appName, userId, sessionId });
-      const runner = new Runner({ appName, agent, sessionService });
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: [
+          {
+            role: 'user',
+            parts: parts.map((p) => {
+              if (p.inlineData) {
+                return {
+                  inlineData: {
+                    mimeType: p.inlineData.mimeType,
+                    data: p.inlineData.data,
+                  },
+                };
+              }
+              return { text: p.text || '' };
+            }),
+          },
+        ],
+        config: {
+          systemInstruction: `You are Paralux Extract AI, a world-class intelligent Document Analysis and Data Extraction Engine.
+Analyze the provided document (PDF, image, or text) with high precision and extract typed JSON data strictly adhering to the user's requested schema.
 
-      const events = runner.runAsync({
-        userId,
-        sessionId,
-        newMessage: { role: 'user', parts },
+Guidelines:
+1. Extract exact, truthful values directly from the document without hallucination.
+2. For dates, standardize to ISO-8601 (YYYY-MM-DD) whenever possible.
+3. For numeric currency values, return pure numbers without currency symbols (e.g. 1500.50 instead of "$1,500.50").
+4. If an optional field is absent from the document, set it to null or omit it.
+5. You MUST output valid, clean JSON matching the target schema.`,
+          responseMimeType: 'application/json',
+          responseSchema: normalizedSchema,
+        },
       });
 
-      let rawTextOutput = '';
-
-      for await (const event of events) {
-        if (event.content?.parts) {
-          for (const part of event.content.parts) {
-            if (part.text) {
-              rawTextOutput += part.text;
-            }
-          }
-        }
-      }
-
-      if (rawTextOutput.trim()) {
-        return rawTextOutput;
+      const text = response.text;
+      if (text && text.trim()) {
+        const usageMeta: any = response.usageMetadata || {};
+        return {
+          text,
+          model: modelName,
+          usage: {
+            promptTokens: usageMeta.promptTokenCount || 0,
+            candidatesTokens: usageMeta.candidatesTokenCount || 0,
+            totalTokens: usageMeta.totalTokenCount || (usageMeta.promptTokenCount || 0) + (usageMeta.candidatesTokenCount || 0),
+            thoughtsTokens: usageMeta.thoughtsTokenCount || 0,
+            cachedContentTokens: usageMeta.cachedContentTokenCount || 0,
+          },
+        };
       }
       throw new Error('Empty extraction output returned from model');
     } catch (err: any) {
@@ -224,10 +267,9 @@ export async function processDocumentExtraction(
   const extractionMode = reqPayload.extractionMode === 2 ? 2 : 1;
   const documentType = reqPayload.documentType || 'general';
 
-  // 1. Build and validate Zod Schema
-  let zodSchema: any;
+  // 1. Validate Schema
   try {
-    zodSchema = buildZodSchema(reqPayload.schema);
+    buildZodSchema(reqPayload.schema);
   } catch (schemaErr: any) {
     const err: any = new Error(schemaErr.message || 'Invalid schema format');
     err.statusCode = 400;
@@ -254,53 +296,38 @@ export async function processDocumentExtraction(
     creditsCost
   );
 
-  // 5. Execute Structured Inference with retry mechanism
-  const modelName = MODE_MODELS[extractionMode] || 'gemini-2.5-flash';
+  // 5. Execute Structured Inference with direct SDK & retry mechanism
+  const modelName = MODE_MODELS[extractionMode] || 'gemini-3.5-flash-lite';
 
-  const agent = new LlmAgent({
-    name: 'document_extractor',
-    model: modelName,
-    description: 'Extracts structured data from documents based on user defined schema.',
-    instruction: `You are Paralux Extract AI, a world-class intelligent Document Analysis and Data Extraction Engine.
-Analyze the provided document (PDF, image, or text) with high precision and extract typed JSON data strictly adhering to the user's requested schema.
-
-Guidelines:
-1. Extract exact, truthful values directly from the document without hallucination.
-2. For dates, standardize to ISO-8601 (YYYY-MM-DD) whenever possible.
-3. For numeric currency values, return pure numbers without currency symbols (e.g. 1500.50 instead of "$1,500.50").
-4. If an optional field is absent from the document, set it to null or omit it.
-5. You MUST output valid, clean JSON matching the target schema. Do not include markdown code block formatting.`,
-    outputSchema: zodSchema as any,
-    disallowTransferToParent: true,
-    disallowTransferToPeers: true,
-  });
-
-  const rawTextOutput = await executeInferenceWithRetry(
-    agent,
-    authResult.userId,
-    resolvedDoc.parts
+  const inferenceResult = await executeInferenceWithRetry(
+    modelName,
+    resolvedDoc.parts,
+    reqPayload.schema
   );
 
   // 6. Parse and validate output JSON
   let extractedData: any;
   try {
-    extractedData = JSON.parse(extractJson(rawTextOutput));
+    extractedData = JSON.parse(extractJson(inferenceResult.text));
   } catch (parseErr) {
     console.warn('Document extraction output JSON parse fallback:', parseErr);
-    extractedData = rawTextOutput;
+    extractedData = inferenceResult.text;
   }
 
-  // 7. Phase 2: Commit Credit Deduction AFTER successful inference (Zero-Charge Guarantee)
+  const executionTimeMs = Date.now() - startTime;
+
+  // 7. Phase 2: Commit Credit Deduction AFTER successful inference & save telemetry
   const remainingCredits = await commitCreditDeduction(
     authResult.userId,
     creditsCost,
     extractionId,
     documentType,
     extractionMode,
-    authResult.apiKeyId
+    authResult.apiKeyId,
+    inferenceResult.usage,
+    executionTimeMs,
+    inferenceResult.model
   );
-
-  const executionTimeMs = Date.now() - startTime;
 
   const resultResponse: ExtractionResponse = {
     status: 'success',
@@ -311,6 +338,7 @@ Guidelines:
     executionTimeMs,
     timestamp: Date.now(),
     data: extractedData,
+    usage: inferenceResult.usage,
   };
 
   // 8. If webhookUrl is provided, dispatch payload asynchronously

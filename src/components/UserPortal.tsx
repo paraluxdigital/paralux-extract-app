@@ -6,10 +6,12 @@ import { ApiKeysManager } from './ApiKeysManager';
 import { CodeExporter } from './CodeExporter';
 import { ApiDocs } from './ApiDocs';
 import { CreditTopupModal } from './CreditTopupModal';
+import { UsageLogsManager } from './UsageLogsManager';
 
 const TAB_TITLES: Record<string, string> = {
   workbench: 'Schema Workbench',
   keys: 'API Keys & Limits',
+  logs: 'Telemetry & Logs',
   docs: 'REST API Specs',
   snippets: 'SDK Code Snippets',
 };
@@ -309,6 +311,18 @@ export const UserPortal: React.FC = () => {
         </button>
 
         <button
+          onClick={() => navigateToPortal('logs')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+            portalTab === 'logs'
+              ? 'bg-[#dd6b20] text-white shadow-md'
+              : 'text-[#a0aec0] hover:text-[#f7fafc] hover:bg-[#2d3748]'
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">analytics</span>
+          <span>Telemetry & Logs</span>
+        </button>
+
+        <button
           onClick={() => navigateToPortal('docs')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
             portalTab === 'docs'
@@ -337,6 +351,7 @@ export const UserPortal: React.FC = () => {
       <div>
         {portalTab === 'workbench' && <Playground />}
         {portalTab === 'keys' && <ApiKeysManager />}
+        {portalTab === 'logs' && <UsageLogsManager />}
         {portalTab === 'docs' && <ApiDocs />}
         {portalTab === 'snippets' && <CodeExporter />}
       </div>

@@ -1,7 +1,5 @@
 {
   "projects": {
-    "default": "paralux-extract",
-    "prod": "paralux-extract",
-    "staging": "paralux-extract"
+    "default": "paralux-extract"
   }
 }

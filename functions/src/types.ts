@@ -21,6 +21,33 @@ export interface ExtractionRequest {
   jobId?: string;
 }
 
+export interface TokenUsageMetrics {
+  promptTokens: number;
+  candidatesTokens: number;
+  totalTokens: number;
+  thoughtsTokens?: number;
+  cachedContentTokens?: number;
+}
+
+export interface UsageLogRecord {
+  extractionId: string;
+  userId: string;
+  apiKeyId?: string | null;
+  documentType: string;
+  extractionMode: ExtractionModeType;
+  model: string;
+  promptTokens: number;
+  candidatesTokens: number;
+  totalTokens: number;
+  thoughtsTokens?: number;
+  cachedContentTokens?: number;
+  creditsDeducted: number;
+  executionTimeMs: number;
+  timestamp: number;
+  status: 'success' | 'failed';
+  errorMessage?: string;
+}
+
 export interface ExtractionResponse {
   status: 'success' | 'error';
   extractionId: string;
@@ -30,6 +57,7 @@ export interface ExtractionResponse {
   executionTimeMs: number;
   timestamp: number;
   data?: Record<string, any>;
+  usage?: TokenUsageMetrics;
   error?: string;
   code?: string;
 }

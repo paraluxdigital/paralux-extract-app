@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:backend": "cd functions && npm run dev",
+    "emulators": "firebase emulators:start",
+    "emulators:functions": "firebase emulators:start --only functions",
     "build": "tsc -b && vite build",
+    "build:functions": "cd functions && npm run build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
