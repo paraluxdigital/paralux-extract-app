@@ -7,7 +7,15 @@ updates:
       interval: "weekly"
       day: "monday"
     target-branch: "staging"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
+    groups:
+      frontend-dependencies:
+        patterns:
+          - "*"
+    ignore:
+      # Block automatic PRs for breaking major versions (e.g. React 20, Vite 9)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     labels:
       - "dependencies"
       - "frontend"
@@ -19,7 +27,15 @@ updates:
       interval: "weekly"
       day: "monday"
     target-branch: "staging"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
+    groups:
+      backend-dependencies:
+        patterns:
+          - "*"
+    ignore:
+      # Block breaking major versions (e.g. Node types 26 when runtime is Node 22, Firebase-admin 14)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     labels:
       - "dependencies"
       - "backend"
@@ -31,7 +47,11 @@ updates:
       interval: "weekly"
       day: "monday"
     target-branch: "staging"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
+    groups:
+      github-actions:
+        patterns:
+          - "*"
     labels:
       - "dependencies"
       - "ci"
