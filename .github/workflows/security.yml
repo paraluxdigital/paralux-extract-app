@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   secret-scan:
-    name: Gitleaks Secret Scan
+    name: Secret Leak Scan (Gitleaks Open-Source)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -21,10 +21,16 @@ jobs:
         with:
           fetch-depth: 0 # Full git history is required to inspect all commits
 
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Gitleaks Binary
+        run: |
+          VERSION=8.24.0
+          curl -sSL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo install gitleaks /usr/local/bin/
+          rm gitleaks gitleaks.tar.gz
+
+      - name: Run Gitleaks Detect
+        run: gitleaks detect --verbose --redact
 
   dependency-audit:
     name: Dependency Vulnerability Audit
