@@ -23,21 +23,35 @@ export async function verifyAuthAndReserveQuota(
   // 1. Validate Secret API Key if provided
   if (apiKey) {
     const hashed = hashApiKey(apiKey);
+    let keyDoc: FirebaseFirestore.QueryDocumentSnapshot | undefined;
     const keyQuery = await db
       .collection('api_keys')
-      .where('keyHash', '==', hashed)
+      .where('hashedKey', '==', hashed)
       .where('status', '==', 'active')
       .limit(1)
       .get();
 
-    if (keyQuery.empty) {
+    if (!keyQuery.empty) {
+      keyDoc = keyQuery.docs[0];
+    } else {
+      const fallbackQuery = await db
+        .collection('api_keys')
+        .where('keyHash', '==', hashed)
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
+      if (!fallbackQuery.empty) {
+        keyDoc = fallbackQuery.docs[0];
+      }
+    }
+
+    if (!keyDoc) {
       const err: any = new Error('Invalid or revoked API key.');
       err.statusCode = 401;
       err.code = 'INVALID_API_KEY';
       throw err;
     }
 
-    const keyDoc = keyQuery.docs[0];
     const keyData = keyDoc.data();
     apiKeyId = keyDoc.id;
     keyName = keyData.name || 'Secret Key';
