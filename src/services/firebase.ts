@@ -34,12 +34,12 @@ import {
 import type { UserProfile, ApiKeyItem, CreatedKeySecret } from '../types/auth';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyAjzfG07rUtI8W54jq68w_NFv_p6wccYis',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'paralux-extract.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'paralux-extract',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'paralux-extract.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '897687440263',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:897687440263:web:0d0a0d455407e777a16122',
 };
 
 // Initialize Firebase App singleton
