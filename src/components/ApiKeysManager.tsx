@@ -15,23 +15,24 @@ export const ApiKeysManager: React.FC = () => {
   const [revokeConfirmId, setRevokeConfirmId] = useState<string | null>(null);
 
   // Low-Balance & Runway Alert Preferences State
+  const [prevProfile, setPrevProfile] = useState(userProfile);
   const [thresholdInput, setThresholdInput] = useState<number>(userProfile?.alertThreshold ?? 50);
   const [alertEmailInput, setAlertEmailInput] = useState(userProfile?.alertEmail || userProfile?.email || '');
   const [webhookUrlInput, setWebhookUrlInput] = useState(userProfile?.webhookAlertUrl || '');
   const [isSavingPrefs, setIsSavingPrefs] = useState(false);
   const [savedPrefsSuccess, setSavedPrefsSuccess] = useState(false);
 
-  useEffect(() => {
+  if (userProfile !== prevProfile) {
+    setPrevProfile(userProfile);
     if (userProfile) {
       setThresholdInput(userProfile.alertThreshold ?? 50);
       setAlertEmailInput(userProfile.alertEmail || userProfile.email || '');
       setWebhookUrlInput(userProfile.webhookAlertUrl || '');
     }
-  }, [userProfile]);
+  }
 
   useEffect(() => {
     if (!currentUser) {
-      setKeys([]);
       return;
     }
 

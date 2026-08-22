@@ -24,18 +24,16 @@ export interface UsageLogItem {
 export const UsageLogsManager: React.FC = () => {
   const { currentUser } = useAuth();
   const [logs, setLogs] = useState<UsageLogItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(currentUser?.uid));
   const [searchFilter, setSearchFilter] = useState('');
   const [modeFilter, setModeFilter] = useState<string>('all');
   const [selectedLog, setSelectedLog] = useState<UsageLogItem | null>(null);
 
   useEffect(() => {
     if (!currentUser?.uid) {
-      setLoading(false);
       return;
     }
 
-    setLoading(true);
     const unsubscribe = subscribeToUserUsageLogs(currentUser.uid, (data) => {
       setLogs(data as UsageLogItem[]);
       setLoading(false);
