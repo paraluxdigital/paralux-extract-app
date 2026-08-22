@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "paralux-extract"
+  },
+  "targets": {
+    "paralux-extract": {
+      "hosting": {
+        "prod": [
+          "paralux-extract"
+        ],
+        "staging": [
+          "paralux-extract"
+        ]
+      }
+    }
   }
 }
